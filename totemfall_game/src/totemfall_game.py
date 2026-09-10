@@ -7,10 +7,19 @@ from gale.game import Game
 from gale.input_handler import InputData, InputHandler, InputListener
 from gale.state import StateMachine
 
+from src.states.MainMenuState import MainMenuState
+from src.states.PlayState import PlayState
+from src.states.OptionsState import OptionsState
+
 
 class TotemfallGame(Game, InputListener):
     def init(self) -> None:
-        self.state_machine = StateMachine()
+        self.state_machine = StateMachine({
+            'main_menu': lambda sm: MainMenuState(sm),
+            'play': lambda sm: PlayState(sm),
+            'options': lambda sm: OptionsState(sm)
+        })
+        self.state_machine.change('main_menu')
         InputHandler.register_listener(self)
 
     def update(self, dt: float) -> None:
@@ -20,5 +29,8 @@ class TotemfallGame(Game, InputListener):
         self.state_machine.render(surface)
 
     def on_input(self, input_id: str, input_data: InputData) -> None:
-        if (input_id == 'quit' and input_data.pressed):
-            self.quit()
+        if input_id == 'quit' and input_data.pressed:
+            mods = pygame.key.get_mods()
+            if mods & pygame.KMOD_CTRL:
+                self.quit()
+        self.state_machine.on_input(input_id, input_data)

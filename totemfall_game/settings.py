@@ -20,7 +20,13 @@ from gale import input_handler
 # with, mixer and font included -- and does so without raising if, say,
 # no audio device is available, unlike calling pygame.mixer.init() directly.
 
-input_handler.InputHandler.set_keyboard_action(input_handler.KEY_ESCAPE, 'quit')
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_q, 'quit')
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RETURN, 'confirm')
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RIGHT, 'right')
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_LEFT, 'left')
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_o, 'options')
+
+
 
 TITLE = 'Totemfall Game'
 
@@ -38,13 +44,20 @@ BASE_DIR = pathlib.Path(__file__).parent
 # TEXTURES = {
 #     'my_texture': pygame.image.load(BASE_DIR / "assets" / "graphics" / "my_texture.png")
 # }
-TEXTURES = {}
+TEXTURES = {
+    'wizard': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprWizard.png"),
+    'stairs': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprStairs.png"),
+    'cursor': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprCursor.png")
+}
 
 # Register your frames, for instance:
 # FRAMES = {
 #     'my_frames': frames.generate_frames(TEXTURES['my_texture'], 16, 16)
 # }
-FRAMES = {}
+FRAMES = {
+    'wizard_frames': frames.generate_frames(TEXTURES['wizard'], 26, 18),
+    'cursor_frames': frames.generate_frames(TEXTURES['cursor'], 45, 45),
+}
 
 # Register your sound from the sounds folder, for instance:
 # SOUNDS = {
@@ -56,4 +69,9 @@ SOUNDS = {}
 # FONTS = {
 #     'small': pygame.font.Font(BASE_DIR / "assets"  / "fonts" / "font.ttf", 8)
 # }
-FONTS = {}
+FONTS = {
+    'medium': pygame.font.Font(BASE_DIR / "assets" / "fonts" / "Menu_Font.ttf", 32),
+    'small': pygame.font.Font(BASE_DIR / "assets" / "fonts" / "SubMenu_Font.ttf", 16),
+    
+
+}
