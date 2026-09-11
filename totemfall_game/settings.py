@@ -40,6 +40,16 @@ WINDOW_HEIGHT = 720
 
 BASE_DIR = pathlib.Path(__file__).parent
 
+#Prueba se puede borrar -----
+raw_obelisk = pygame.image.load(BASE_DIR / "assets" / "graphics" / "Obelisk.png")
+scale_factor = 5
+new_width = raw_obelisk.get_width() // scale_factor
+new_height = raw_obelisk.get_height() // scale_factor
+scaled_obelisk = pygame.transform.smoothscale(raw_obelisk, (new_width, new_height))
+#-------
+
+
+
 # Register your textures from the graphics folder, for instance:
 # TEXTURES = {
 #     'my_texture': pygame.image.load(BASE_DIR / "assets" / "graphics" / "my_texture.png")
@@ -47,7 +57,11 @@ BASE_DIR = pathlib.Path(__file__).parent
 TEXTURES = {
     'wizard': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprWizard.png"),
     'stairs': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprStairs.png"),
-    'cursor': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprCursor.png")
+    'cursor': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprCursor.png"),
+    'magic_bolt': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprMagicBolt.png"),
+    'magic_explosion': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprMagicExplosion.png"),
+    'batilisk': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprBatilisk1.png"),
+    'obelisk': scaled_obelisk,
 }
 
 # Register your frames, for instance:
@@ -57,6 +71,10 @@ TEXTURES = {
 FRAMES = {
     'wizard_frames': frames.generate_frames(TEXTURES['wizard'], 26, 18),
     'cursor_frames': frames.generate_frames(TEXTURES['cursor'], 45, 45),
+    'magic_bolt_frames': frames.generate_frames(TEXTURES['magic_bolt'], 15, 5),
+    'magic_explosion_frames': frames.generate_frames(TEXTURES['magic_explosion'], 13, 13),
+    'obelisk_frames': frames.generate_frames(TEXTURES['obelisk'], 38, 48),
+    'batilisk_frames': frames.generate_frames(TEXTURES['batilisk'], 25,25 ),
 }
 
 # Register your sound from the sounds folder, for instance:
