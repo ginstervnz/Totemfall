@@ -11,6 +11,8 @@ class Projectile:
         self.dx = 0
         self.dy = 0
         self.speed = 0
+        self.width = 0
+        self.height = 0
         self.animation = None
         self.texture_id = None
 
@@ -51,7 +53,25 @@ class Projectile:
             rotated_surf = pygame.transform.rotate(surf, angle_deg)
             self.rotated_frames.append(rotated_surf)
 
+        base_rect = settings.FRAMES[f"{self.texture_id}_frames"][frames_list[0]]
+        self.width = base_rect.width
+        self.height = base_rect.height
+
         self.animation = Animation(list(range(len(frames_list))), 0.1)
+
+    def get_collision_rect(self) -> pygame.Rect:
+        """
+        Calculates the collision box adapted for rotation and 'wobble'.
+        """
+        distance_traveled = self.lifetime * self.speed
+        wobble = math.sin(distance_traveled * self.wobble_frequency) * 3
+        current_x = self.x + (self.nx * wobble)
+        current_y = self.y + (self.ny * wobble)
+        
+        frame_idx = self.animation.get_current_frame()
+        current_surf = self.rotated_frames[frame_idx]
+        
+        return current_surf.get_rect(center=(current_x, current_y))
 
     def update(self, dt: float) -> None:
         # If the bullet is inactive, we skip all its code to save memory.
