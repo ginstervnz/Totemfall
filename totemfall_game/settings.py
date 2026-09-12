@@ -31,8 +31,16 @@ input_handler.InputHandler.set_keyboard_action(input_handler.KEY_o, 'options')
 TITLE = 'Totemfall Game'
 
 # Size we want to emulate
-VIRTUAL_WIDTH = 480 
+VIRTUAL_WIDTH = 480
 VIRTUAL_HEIGHT = 270
+
+
+TILE_SIZE = 16
+MAP_WIDTH = 30
+TILE_SIZE_Y = 14
+MAP_HEIGHT = 19
+MAP_RENDER_OFFSET_X = 0
+MAP_RENDER_OFFSET_Y = 5
 
 # Size of our actual window
 WINDOW_WIDTH = 1280
@@ -64,6 +72,15 @@ TEXTURES = {
     'attack_swing': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack"/"sprAttackSwing.png"),
     'goblin': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters" / "sprOrcArcher1.png"),
     'arrow': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack"/"sprArrow.png"),
+    'brick': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprBrick.png"),
+    'props_swamp': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprPropsSwamp.png"),
+    'brimstone': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprBrimstone.png"),
+    'props_inferno': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprPropsInferno.png"),
+    'lava': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprLava.png"),
+    'props_catacombs': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprPropsCatacombs.png"),
+    'props_corpses': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprPropsCorpses.png"),
+    'rock': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprRock.png"),
+    'water': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprWater.png"),
     'obelisk': scaled_obelisk,
 }
 
@@ -81,6 +98,15 @@ FRAMES = {
     'attack_swing_frames': frames.generate_frames(TEXTURES['attack_swing'], 10, 20),
     'goblin_frames': frames.generate_frames(TEXTURES['goblin'], 20,18 ),
     'arrow_frames': frames.generate_frames(TEXTURES['arrow'], 14,3 ),
+    'brick': frames.generate_frames(TEXTURES['brick'], 20, 20),
+    'props_swamp': frames.generate_frames(TEXTURES['props_swamp'], 15, 13),
+    'brimstone': frames.generate_frames(TEXTURES['brimstone'], 20, 20),
+    'props_inferno': frames.generate_frames(TEXTURES['props_inferno'], 11, 15),
+    'lava': frames.generate_frames(TEXTURES['lava'], 20, 20),
+    'props_catacombs': frames.generate_frames(TEXTURES['props_catacombs'], 16, 21),
+    'props_corpses': frames.generate_frames(TEXTURES['props_corpses'], 8, 9),
+    'rock': frames.generate_frames(TEXTURES['rock'], 20, 20),
+    'water': frames.generate_frames(TEXTURES['water'], 20, 20),
 }
 
 # Register your sound from the sounds folder, for instance:

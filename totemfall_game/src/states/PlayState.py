@@ -7,6 +7,11 @@ from src.entities.Projectile import Projectile
 from src.entities.Totem import Totem
 from src.entities.enemies.monsters.Batilisk import Batilisk
 from src.entities.enemies.monsters.Goblin import Goblin
+from src.world.SwampRoom import SwampRoom
+from src.world.InfernoRoom import InfernoRoom
+from src.world.CatacombsRoom import CatacombsRoom
+from src.world.RockRoom import RockRoom
+from src.world.WaterRoom import WaterRoom
 
 import settings
 
@@ -41,6 +46,10 @@ class PlayState(BaseState):
         wizard_y = self.platform_y + 11
         self.player = Player(wizard_x, wizard_y)
 
+        # Progression system
+        self.current_level = 1
+        self.load_world()
+
         # Cursor
         pygame.mouse.set_visible(False)
         self.cursor_frame = 3
@@ -54,6 +63,41 @@ class PlayState(BaseState):
             'texture': 'magic_bolt',
             'frames': [0, 1, 2, 3]
         }
+# --- NUEVO: Temporizador anti-rebote (Debounce) ---
+        self.level_cooldown = 0
+
+    def load_world(self) -> None:
+        """Loads the correct room class based on the global level."""
+        if self.current_level <= 8:
+            self.current_room = SwampRoom(player=self.player)
+        elif self.current_level <= 16:
+            self.current_room = InfernoRoom(player=self.player)
+        elif self.current_level <= 24:
+            self.current_room = CatacombsRoom(player=self.player)
+        elif self.current_level <= 32:
+            self.current_room = RockRoom(player=self.player)
+        else:
+            self.current_room = WaterRoom(player=self.player)
+        
+        # Update the internal density and regenerate
+        self._update_room_density()
+
+    def advance_level(self) -> None:
+        """Increases the global level and regenerates the map or switches worlds."""
+        self.current_level += 1
+        
+        # If we hit level 9 or 17, swap the entire world class
+        if (self.current_level - 1) % 8 == 0:
+            self.load_world()
+        else:
+            # Otherwise, just make the current world harder and rebuild the blocks
+            self._update_room_density()
+
+    def _update_room_density(self) -> None:
+        """Calculates the internal 1-8 difficulty and forces a map redraw."""
+        internal_level = ((self.current_level - 1) % 8) + 1
+        self.current_room.current_level = internal_level
+        self.current_room._generate_procedural_layout()
 
         # Shot enemy goblins
         self.enemy_projectiles = [Projectile() for _ in range(30)]
@@ -80,6 +124,11 @@ class PlayState(BaseState):
     def update(self, dt: float) -> None:
         self.totem.update(dt)
         self.player.update(dt)
+        self.current_room.update(dt)
+
+        # --- NUEVO: Reducir el cooldown con el tiempo Delta ---
+        if self.level_cooldown > 0:
+            self.level_cooldown -= dt
 
         #Particle 
         for i in range(len(self.particle_systems) - 1, -1, -1):
@@ -102,8 +151,16 @@ class PlayState(BaseState):
                     break
         else:
             self.cursor_frame = 3
+
+        solid_rects = self.current_room.get_solid_rects()
+
         for p in self.projectiles:
-            p.update(dt)
+            if p.active:
+                p.update(dt)
+
+                # If the dynamic hitbox collides with a wall in the room, we deactivate the magic.
+                if p.get_collision_rect().collidelist(solid_rects) != -1:
+                    p.active = False
 
         # Colision logic for enemies
         for i in range(len(self.enemies) - 1, -1, -1):
@@ -145,6 +202,9 @@ class PlayState(BaseState):
         scaled_stairs = pygame.transform.scale(stairs_img, (settings.VIRTUAL_WIDTH, stairs_img.get_height()))
         surface.blit(scaled_stairs, (0, self.platform_y))
 
+        if self.current_room:
+            self.current_room.render(surface)
+
         # Render totem
         self.totem.render(surface)
 
@@ -181,3 +241,9 @@ class PlayState(BaseState):
         if input_id == 'quit' and input_data.pressed:
             pygame.mouse.set_visible(True)
             self.state_machine.change('main_menu')
+
+        if input_id == 'confirm' and input_data.pressed:
+            if self.level_cooldown <= 0:
+                self.advance_level()
+                print(f"Level advanced to: {self.current_level}")
+                self.level_cooldown = 0.3
