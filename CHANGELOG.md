@@ -25,7 +25,8 @@ Todas las adiciones, cambios y correcciones de este proyecto serán documentadas
 - **IA Cuerpo a Cuerpo (Batilisk):** Creación de la entidad `Batilisk` con lógica de persecución matemática (*Pathfinding*), un estado dedicado de ataque (`EnemyAttackState`) y un efecto visual de tajo de espada que calcula y rota dinámicamente hacia el objetivo.
 - **IA a Distancia (Goblin):** Creación de la entidad arquera `Goblin` con su propio *Object Pool* de flechas independientes.
 - **Lógica de Rango y Movimiento (Strafing):** Implementación de `EnemyRangedWalkState` para calcular distancias euclidianas (rango de visión), y `EnemyRangedAttackState` con comportamiento de pasos laterales y pausas tácticas para tensar el arco, evitando que el enemigo sea un blanco estático.
-## [v0.2.0] - Generación Procedural, Multimundos y Físicas
+
+##  Generación Procedural, Multimundos y Físicas
 
 ### Añadido
 - **Arquitectura Procedural Base:** Creación de la clase padre `ProceduralRoom` encargada de generar la estructura de los niveles.
@@ -40,5 +41,3 @@ Todas las adiciones, cambios y correcciones de este proyecto serán documentadas
 ### Cambiado
 - **Refactorización y Optimización:** Se optimizó la complejidad de la generación de la matriz espacial de los mapas fusionando bucles anidados y utilizando *Set Comprehensions* (operaciones nativas rápidas en Python).
 - **Ajuste de Padding Visual:** Modificación matemática de `TILE_SIZE_Y` en las configuraciones globales para aplastar los *sprites* y eliminar los huecos transparentes, logrando muros visualmente sólidos y conectados.
-
----

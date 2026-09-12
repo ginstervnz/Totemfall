@@ -46,25 +46,40 @@ class PlayState(BaseState):
         wizard_y = self.platform_y + 11
         self.player = Player(wizard_x, wizard_y)
 
-        # Progression system
-        self.current_level = 1
-        self.load_world()
-
         # Cursor
         pygame.mouse.set_visible(False)
         self.cursor_frame = 3
 
         #Shot player
         self.projectiles = [Projectile() for _ in range(50)]
-        
-        # Dictionary for magicball
         self.basic_shot_config = {
             'speed': 150,
             'texture': 'magic_bolt',
             'frames': [0, 1, 2, 3]
         }
-# --- NUEVO: Temporizador anti-rebote (Debounce) ---
+
+        # Shot enemy goblins
+        self.enemy_projectiles = [Projectile() for _ in range(30)] 
+        self.arrow_config = {
+            'speed': 120,
+            'texture': 'arrow',
+            'frames': [0,1,2,3,4,5] 
+        }
+
+        # --- ENTORNO DE PRUEBAS ---
+        test_enemy = Goblin(settings.VIRTUAL_WIDTH // 2 - 10, 150)
+        test_enemy.target = self.totem
+        test_enemy.target_y = self.platform_y + 50
+        self.enemies = [test_enemy]
+
+        # Don't erase
+        self.particle_systems = []
+        self.player_damage = 5
         self.level_cooldown = 0
+
+        # Progression system
+        self.current_level = 1
+        self.load_world()
 
     def load_world(self) -> None:
         """Loads the correct room class based on the global level."""
@@ -99,34 +114,13 @@ class PlayState(BaseState):
         self.current_room.current_level = internal_level
         self.current_room._generate_procedural_layout()
 
-        # Shot enemy goblins
-        self.enemy_projectiles = [Projectile() for _ in range(30)]
-
-        self.arrow_config = {
-            'speed': 120,
-            'texture': 'arrow',
-            'frames': [0,1,2,3,4,5] 
-        }
-
-
-        # --- ENTORNO DE PRUEBAS ---
-        test_enemy = Goblin(settings.VIRTUAL_WIDTH // 2 - 10, 150)
-        test_enemy.target = self.totem
-        test_enemy.target_y = self.platform_y + 50
-        self.enemies = [test_enemy]
-
-
-        #Don't erase
-        self.particle_systems = []
-        self.player_damage = 5
-
 
     def update(self, dt: float) -> None:
         self.totem.update(dt)
         self.player.update(dt)
         self.current_room.update(dt)
 
-        # --- NUEVO: Reducir el cooldown con el tiempo Delta ---
+        # Reducir el cooldown con el tiempo Delta 
         if self.level_cooldown > 0:
             self.level_cooldown -= dt
 
@@ -135,8 +129,6 @@ class PlayState(BaseState):
             self.particle_systems[i].update(dt)
             if not self.particle_systems[i].active:
                 self.particle_systems.pop(i)
-
-
 
         #Cursor and shot
         if self.player.just_fired:
