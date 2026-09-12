@@ -20,11 +20,16 @@ class Projectile:
         self.ny = 0 
         self.rotated_frames = []
 
+        #Animation explo magic
+        self.is_exploding = False
+        self.explosion_timer = 0
+
     def fire(self, x: float, y: float, angle: float,target_dist: float , config: dict) -> None:
         """
         It wakes up the projectile and injects the configuration (Data-Driven).
         """
         self.active = True
+        self.is_exploding = False
         self.x = x
         self.y = y
         self.speed = config.get('speed', 250)
@@ -53,9 +58,26 @@ class Projectile:
 
         self.animation = Animation(list(range(len(frames_list))), 0.1)
 
+    def explode(self) -> None:
+        self.is_exploding = True
+        self.dx = 0
+        self.dy = 0
+        self.explosion_timer = 0.15 
+        self.texture_id = 'magic_explosion'
+        self.animation = Animation([0, 1, 2, 3], 0.05)
+
+
+
     def update(self, dt: float) -> None:
         # If the bullet is inactive, we skip all its code to save memory.
         if not self.active:
+            return
+
+        if self.is_exploding:
+            self.explosion_timer -= dt
+            self.animation.update(dt)
+            if self.explosion_timer <= 0:
+                self.active = False
             return
 
         self.lifetime += dt
@@ -71,6 +93,16 @@ class Projectile:
     def render(self, surface: pygame.Surface) -> None:
         if not self.active:
             return
+
+        if self.is_exploding:
+            image = settings.TEXTURES[self.texture_id]
+            frame_idx = self.animation.get_current_frame()
+            frame_rect = settings.FRAMES[f"{self.texture_id}_frames"][frame_idx] 
+            current_surf = image.subsurface(frame_rect)
+            rect = current_surf.get_rect(center=(self.x, self.y))
+            surface.blit(current_surf, rect)
+            return
+
 
         distance_traveled = self.lifetime * self.speed
         wobble = math.sin(distance_traveled * self.wobble_frequency) * 3

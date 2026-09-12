@@ -31,8 +31,8 @@ input_handler.InputHandler.set_keyboard_action(input_handler.KEY_o, 'options')
 TITLE = 'Totemfall Game'
 
 # Size we want to emulate
-VIRTUAL_WIDTH = 320
-VIRTUAL_HEIGHT = 180
+VIRTUAL_WIDTH = 480 
+VIRTUAL_HEIGHT = 270
 
 # Size of our actual window
 WINDOW_WIDTH = 1280
@@ -61,6 +61,9 @@ TEXTURES = {
     'magic_bolt': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprMagicBolt.png"),
     'magic_explosion': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprMagicExplosion.png"),
     'batilisk': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprBatilisk1.png"),
+    'attack_swing': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack"/"sprAttackSwing.png"),
+    'goblin': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters" / "sprOrcArcher1.png"),
+    'arrow': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack"/"sprArrow.png"),
     'obelisk': scaled_obelisk,
 }
 
@@ -75,6 +78,9 @@ FRAMES = {
     'magic_explosion_frames': frames.generate_frames(TEXTURES['magic_explosion'], 13, 13),
     'obelisk_frames': frames.generate_frames(TEXTURES['obelisk'], 38, 48),
     'batilisk_frames': frames.generate_frames(TEXTURES['batilisk'], 25,25 ),
+    'attack_swing_frames': frames.generate_frames(TEXTURES['attack_swing'], 10, 20),
+    'goblin_frames': frames.generate_frames(TEXTURES['goblin'], 20,18 ),
+    'arrow_frames': frames.generate_frames(TEXTURES['arrow'], 14,3 ),
 }
 
 # Register your sound from the sounds folder, for instance:

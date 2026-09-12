@@ -14,7 +14,7 @@ class Player:
         self.height = 18
         self.speed = 100
         self.facing_right = True
-
+        
         #Shot 
         self.fire_rate = 0.5 
         self.shoot_timer = self.fire_rate
