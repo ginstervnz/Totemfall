@@ -10,6 +10,12 @@ class Batilisk(BaseEnemy):
         super().__init__(x, y, hp=20, speed=30)
         self.width = 20
         self.height = 18
+
+        # --- ENEMY SPECIFIC MELEE CONFIG ---
+        self.attack_texture = 'attack_swing'
+        self.attack_frames = [0, 1, 2, 3] 
+        self.attack_damage_frame = 3
+
         
         self.animations = {
             'walk': Animation([0, 1, 2, 3], 0.15)

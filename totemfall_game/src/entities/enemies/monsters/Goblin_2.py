@@ -4,7 +4,7 @@ from src.entities.enemies.states.EnemyAttackState import EnemyAttackState
 from gale.state import StateMachine
 from gale.animation import Animation
 
-class Goblin(BaseEnemy):
+class Goblin_2(BaseEnemy):
     def __init__(self, x: float, y: float):
         super().__init__(x, y, hp=15, speed=25) 
         self.width = 23 
@@ -26,4 +26,4 @@ class Goblin(BaseEnemy):
         self.state_machine.change('walk')
 
     def render(self, surface) -> None:
-        super().render(surface, 'goblin2', 'goblin2_frames')
+        super().render(surface, 'goblin2_2', 'goblin2_2_frames')

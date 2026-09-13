@@ -10,6 +10,7 @@ from gale.state import StateMachine
 from src.states.MainMenuState import MainMenuState
 from src.states.PlayState import PlayState
 from src.states.OptionsState import OptionsState
+from src.states.GameOverState import GameOverState
 
 
 class TotemfallGame(Game, InputListener):
@@ -17,7 +18,8 @@ class TotemfallGame(Game, InputListener):
         self.state_machine = StateMachine({
             'main_menu': lambda sm: MainMenuState(sm),
             'play': lambda sm: PlayState(sm),
-            'options': lambda sm: OptionsState(sm)
+            'options': lambda sm: OptionsState(sm),
+            'game_over': lambda sm: GameOverState(sm),
         })
         self.state_machine.change('main_menu')
         InputHandler.register_listener(self)

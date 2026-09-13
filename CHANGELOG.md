@@ -41,3 +41,10 @@ Todas las adiciones, cambios y correcciones de este proyecto serán documentadas
 ### Cambiado
 - **Refactorización y Optimización:** Se optimizó la complejidad de la generación de la matriz espacial de los mapas fusionando bucles anidados y utilizando *Set Comprehensions* (operaciones nativas rápidas en Python).
 - **Ajuste de Padding Visual:** Modificación matemática de `TILE_SIZE_Y` en las configuraciones globales para aplastar los *sprites* y eliminar los huecos transparentes, logrando muros visualmente sólidos y conectados.
+
+## [v0.3.0] - Agregado de enemigos, vida del totem Y primeras Oleadas
+
+### Añadido
+- **Arquitectura Procedural para la generacion de enemigos:** Cracion de la clase `WaveManager.py` que gestiona la generacion de los enemigos en el nivel.
+- **Algoritmos de Mapas con enemigos:** Implementación de tipos especificos de enemigos por tipo de mundo.
+- **Agregado de los tipos de enmigos:** Implementacion de los diferentes mounstros que va a tener el juego.

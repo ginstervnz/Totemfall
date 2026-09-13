@@ -9,10 +9,10 @@ class PlayerWalkState(BaseEntityState):
     def update(self, dt: float) -> None:
         keys = pygame.key.get_pressed()
         
-        if keys[pygame.K_LEFT]:
+        if any(keys[key] for key in settings.CONTROLS['left']):
             self.entity.x -= self.entity.speed * dt
             self.entity.facing_right = False
-        elif keys[pygame.K_RIGHT]:
+        elif any(keys[key] for key in settings.CONTROLS['right']):
             self.entity.x += self.entity.speed * dt
             self.entity.facing_right = True
         else:

@@ -25,8 +25,14 @@ input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RETURN, 'confir
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RIGHT, 'right')
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_LEFT, 'left')
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_o, 'options')
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_d, 'right')
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_a, 'left')
 
-
+# Continuous key
+CONTROLS = {
+    'left': [pygame.K_LEFT, pygame.K_a],
+    'right': [pygame.K_RIGHT, pygame.K_d],
+}
 
 TITLE = 'Totemfall Game'
 
@@ -81,6 +87,33 @@ TEXTURES = {
     'props_corpses': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprPropsCorpses.png"),
     'rock': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprRock.png"),
     'water': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprWater.png"),
+    'heart': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprHeart.png"),
+    'sparkle': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack" / "sprSparkle.png"),
+    'goblin_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters" / "sprOrcArcher2.png"),
+    'goblin_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters" / "sprOrcArcher3.png"),
+    'batilisk_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprBatilisk2.png"),
+    'batilisk_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprBatilisk3.png"),
+    'slime': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprBogslium1.png"),
+    'slime_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprBogslium2.png"),
+    'slime_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprBogslium3.png"),
+    'skeleton': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprSkeleton1.png"),
+    'skeleton_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprSkeleton2.png"),
+    'skeleton_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprSkeleton3.png"),
+    'minotaur': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprMinotaur1.png"),
+    'minotaur_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprMinotaur2.png"),
+    'minotaur_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprMinotaur3.png"),
+    'lizard': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprLizardMonk1.png"),
+    'lizard_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprLizardMonk2.png"),
+    'lizard_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprLizardMonk3.png"),
+    'ghost': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprGhost1.png"),
+    'ghost_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprGhost2.png"),
+    'ghost_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprGhost3.png"),
+    'ghost_bolt': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack" / "sprGhostOrb.png"),
+    'fire_bolt': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprFireBolt.png"),
+    'attack_spear': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack" / "sprAttackSpear.png"),
+    'goblin2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprGoblin1.png"),
+    'goblin2_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprGoblin2.png"),
+    'goblin2_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprGoblin3.png"),
     'obelisk': scaled_obelisk,
 }
 
@@ -107,6 +140,34 @@ FRAMES = {
     'props_corpses': frames.generate_frames(TEXTURES['props_corpses'], 8, 9),
     'rock': frames.generate_frames(TEXTURES['rock'], 20, 20),
     'water': frames.generate_frames(TEXTURES['water'], 20, 20),
+    'heart_frames': frames.generate_frames(TEXTURES['heart'], 6, 4),
+    'sparkle_frames': frames.generate_frames(TEXTURES['sparkle'], 7, 7),
+    'goblin_2_frames': frames.generate_frames(TEXTURES['goblin_2'], 20,18 ),
+    'goblin_3_frames': frames.generate_frames(TEXTURES['goblin_3'], 20,18 ),
+    'batilisk_2_frames': frames.generate_frames(TEXTURES['batilisk_2'], 25,25 ),
+    'batilisk_3_frames': frames.generate_frames(TEXTURES['batilisk_3'], 25,25 ),
+    'slime_frames': frames.generate_frames(TEXTURES['slime'], 39,26 ),
+    'slime_2_frames': frames.generate_frames(TEXTURES['slime_2'], 39,26 ),
+    'slime_3_frames': frames.generate_frames(TEXTURES['slime_3'], 39,26 ),
+    'skeleton_frames': frames.generate_frames(TEXTURES['skeleton'], 19,20 ),
+    'skeleton_2_frames': frames.generate_frames(TEXTURES['skeleton_2'], 19,20 ),
+    'skeleton_3_frames': frames.generate_frames(TEXTURES['skeleton_3'], 19,20 ),
+    'minotaur_frames': frames.generate_frames(TEXTURES['minotaur'], 31,24 ),
+    'minotaur_2_frames': frames.generate_frames(TEXTURES['minotaur_2'], 31,24 ),
+    'minotaur_3_frames': frames.generate_frames(TEXTURES['minotaur_3'], 31,24 ),
+    'lizard_frames': frames.generate_frames(TEXTURES['lizard'], 21,20 ),
+    'lizard_2_frames': frames.generate_frames(TEXTURES['lizard_2'], 21,20 ),
+    'lizard_3_frames': frames.generate_frames(TEXTURES['lizard_3'], 21,20 ),
+    'ghost_frames': frames.generate_frames(TEXTURES['ghost'], 19,28 ),
+    'ghost_2_frames': frames.generate_frames(TEXTURES['ghost_2'], 19,28 ),
+    'ghost_3_frames': frames.generate_frames(TEXTURES['ghost_3'], 19,28 ),
+    'ghost_bolt_frames': frames.generate_frames(TEXTURES['ghost_bolt'], 18, 12),
+    'fire_bolt_frames': frames.generate_frames(TEXTURES['fire_bolt'], 15, 5),
+    'attack_spear_frames': frames.generate_frames(TEXTURES['attack_spear'], 23, 5),
+    'goblin2_frames': frames.generate_frames(TEXTURES['goblin2'], 25,25 ),
+    'goblin2_2_frames': frames.generate_frames(TEXTURES['goblin2_2'], 25,25 ),
+    'goblin2_3_frames': frames.generate_frames(TEXTURES['goblin2_3'], 25,25 ),
+
 }
 
 # Register your sound from the sounds folder, for instance:

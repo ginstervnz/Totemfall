@@ -1,4 +1,5 @@
 import pygame
+import settings
 from src.entities.BaseEntityState import BaseEntityState
 
 class PlayerIdleState(BaseEntityState):
@@ -7,5 +8,8 @@ class PlayerIdleState(BaseEntityState):
 
     def update(self, dt: float) -> None:
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]:
+        
+        list_move = settings.CONTROLS['left'] + settings.CONTROLS['right']
+        
+        if any(keys[key] for key in list_move):
             self.state_machine.change('walk')

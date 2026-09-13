@@ -14,12 +14,30 @@ class Player:
         self.height = 18
         self.speed = 100
         self.facing_right = True
-        
+
+        # Mana logic
+        self.max_mana = 100.0
+        self.mana = self.max_mana
+        self.mana_cost = 10.0 
+        self.mana_regen = 20.5
+        self.is_exhausted = False
+
         #Shot 
         self.fire_rate = 0.5 
         self.shoot_timer = self.fire_rate
         self.just_fired = False
         self.cast_animation_timer = 0
+
+        self.projectile_config = {
+            'speed': 150,
+            'texture': 'magic_bolt',
+            'frames': [0, 1, 2, 3]
+        }
+
+        #Heal
+        self.max_hp = 5
+        self.hp = self.max_hp
+        self.hit_flash_timer = 0
 
 
         self.animations = {
@@ -37,21 +55,40 @@ class Player:
     def change_animation(self, animation_id: str) -> None:
         self.current_animation = self.animations[animation_id]
 
+    def take_damage(self, amount: int) -> None:
+        self.hp = max(0, self.hp - amount)
+        self.hit_flash_timer = 0.15
+
     def update(self, dt: float) -> None:
         self.state_machine.update(dt)
+        self.x = max(0, min(self.x, settings.VIRTUAL_WIDTH - self.width))
+
         self.current_animation.update(dt)
         self.animations['cast'].update(dt)
+
+        # Logic for mana
+        if self.mana < self.max_mana:
+            self.mana = min(self.max_mana, self.mana + (self.mana_regen * dt))
+
+        # If mana reaches 0 
+        if self.mana < self.mana_cost:
+            self.is_exhausted = True
+        elif self.mana >= self.mana_cost * 4:
+            self.is_exhausted = False
+
+        if self.hit_flash_timer > 0:
+            self.hit_flash_timer -= dt
 
         if self.cast_animation_timer > 0:
             self.cast_animation_timer -= dt
 
-        #Shot logic
+        # Shoot
         self.just_fired = False
         self.shoot_timer -= dt
-        
-        if self.shoot_timer <= 0:
+        if self.shoot_timer <= 0 and not self.is_exhausted:
             self.shoot_timer = self.fire_rate 
             self.just_fired = True
+            self.mana -= self.mana_cost
 
             self.cast_animation_timer = 0.15 
             self.animations['cast'] = Animation([4,5], 0.05)
@@ -65,7 +102,6 @@ class Player:
             
             angle = math.atan2(virtual_my - center_y, virtual_mx - center_x)
 
-            #shot angles
             self.shoot_angle = angle
             self.shoot_x = center_x
             self.shoot_y = center_y
@@ -73,15 +109,22 @@ class Player:
 
     def render(self, surface: pygame.Surface) -> None:
         image = settings.TEXTURES['wizard']
-        if self.cast_animation_timer > 0:
+        
+        if self.hit_flash_timer > 0:
+            frame_idx = 6  
+        elif self.cast_animation_timer > 0:
             frame_idx = self.animations['cast'].get_current_frame()
         else:
             frame_idx = self.current_animation.get_current_frame()
             
         frame_rect = settings.FRAMES['wizard_frames'][frame_idx]
-        wizard_surface = image.subsurface(frame_rect)
+        
+        entity_surface = image.subsurface(frame_rect).copy() 
         
         if not self.facing_right:
-            wizard_surface = pygame.transform.flip(wizard_surface, True, False)
+            entity_surface = pygame.transform.flip(entity_surface, True, False)
             
-        surface.blit(wizard_surface, (self.x, self.y))
+        if self.hit_flash_timer > 0:
+            entity_surface.fill((255, 255, 255), special_flags=pygame.BLEND_RGB_ADD)
+            
+        surface.blit(entity_surface, (self.x, self.y))

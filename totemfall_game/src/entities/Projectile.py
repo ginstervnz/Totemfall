@@ -64,13 +64,15 @@ class Projectile:
 
         self.animation = Animation(list(range(len(frames_list))), 0.1)
 
-    def explode(self) -> None:
+    def explode(self, texture_id='magic_explosion', frames=None, frame_time=0.05) -> None:
+        if frames is None:
+            frames = [0, 1, 2, 3] 
         self.is_exploding = True
         self.dx = 0
         self.dy = 0
-        self.explosion_timer = 0.15 
-        self.texture_id = 'magic_explosion'
-        self.animation = Animation([0, 1, 2, 3], 0.05)
+        self.explosion_timer = len(frames) * frame_time
+        self.texture_id = texture_id
+        self.animation = Animation(frames, frame_time)
 
 
     def get_collision_rect(self) -> pygame.Rect:

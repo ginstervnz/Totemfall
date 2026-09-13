@@ -5,8 +5,7 @@ from gale.input_handler import InputData
 from src.entities.player.Player import Player
 from src.entities.Projectile import Projectile
 from src.entities.Totem import Totem
-from src.entities.enemies.monsters.Batilisk import Batilisk
-from src.entities.enemies.monsters.Goblin import Goblin
+from src.world.waves.WaveManager import WaveManager
 from src.world.SwampRoom import SwampRoom
 from src.world.InfernoRoom import InfernoRoom
 from src.world.CatacombsRoom import CatacombsRoom
@@ -50,36 +49,27 @@ class PlayState(BaseState):
         pygame.mouse.set_visible(False)
         self.cursor_frame = 3
 
-        #Shot player
+        #Number for projectiles Player
         self.projectiles = [Projectile() for _ in range(50)]
-        self.basic_shot_config = {
-            'speed': 150,
-            'texture': 'magic_bolt',
-            'frames': [0, 1, 2, 3]
-        }
+        #Nuber for projectiles Enemy
+        self.enemy_projectiles = [Projectile() for _ in range(30)]
 
-        # Shot enemy goblins
-        self.enemy_projectiles = [Projectile() for _ in range(30)] 
-        self.arrow_config = {
-            'speed': 120,
-            'texture': 'arrow',
-            'frames': [0,1,2,3,4,5] 
-        }
 
-        # --- ENTORNO DE PRUEBAS ---
-        test_enemy = Goblin(settings.VIRTUAL_WIDTH // 2 - 10, 150)
-        test_enemy.target = self.totem
-        test_enemy.target_y = self.platform_y + 50
-        self.enemies = [test_enemy]
+        # Progression system
+        self.current_level = 1
+        self.load_world()
+
+        self.enemies = []
+        # Initialize the manager
+        self.wave_manager = WaveManager(self.enemies, self.totem, self.current_room)
+        self.wave_manager.start_wave(self.current_level)
 
         # Don't erase
         self.particle_systems = []
         self.player_damage = 5
         self.level_cooldown = 0
 
-        # Progression system
-        self.current_level = 1
-        self.load_world()
+        
 
     def load_world(self) -> None:
         """Loads the correct room class based on the global level."""
@@ -100,7 +90,8 @@ class PlayState(BaseState):
     def advance_level(self) -> None:
         """Increases the global level and regenerates the map or switches worlds."""
         self.current_level += 1
-        
+        # Start the next wave of enemies
+        self.wave_manager.start_wave(self.current_level)
         # If we hit level 9 or 17, swap the entire world class
         if (self.current_level - 1) % 8 == 0:
             self.load_world()
@@ -120,7 +111,17 @@ class PlayState(BaseState):
         self.player.update(dt)
         self.current_room.update(dt)
 
-        # Reducir el cooldown con el tiempo Delta 
+        #Gameover
+        if self.totem.hp <= 0:
+            pygame.mouse.set_visible(True)
+            self.state_machine.change('game_over')
+            return
+
+        #Hit
+        if self.totem.hit_flash_timer > 0:
+            self.player.hit_flash_timer = self.totem.hit_flash_timer
+
+
         if self.level_cooldown > 0:
             self.level_cooldown -= dt
 
@@ -132,27 +133,32 @@ class PlayState(BaseState):
 
         #Cursor and shot
         if self.player.just_fired:
-            #Cursor
-            self.cursor_frame = 4
-
+            self.cursor_frame = 4 #Normal shot
             #Shot
             for p in self.projectiles:
                 if not p.active:
-                    # Create magic ball
-                    p.fire(self.player.shoot_x, self.player.shoot_y, self.player.shoot_angle, self.player.shoot_target_dist, self.basic_shot_config)
+                    p.fire(self.player.shoot_x, self.player.shoot_y, self.player.shoot_angle, self.player.shoot_target_dist, self.player.projectile_config)
                     break
         else:
-            self.cursor_frame = 3
-
+            if self.player.is_exhausted:
+                self.cursor_frame = 6 # NO MANA
+            elif self.player.mana <= self.player.mana_cost * 4:
+                self.cursor_frame = 5 # Gray
+            else:
+                self.cursor_frame = 3 # Blue
+        
+        #Block logic
         solid_rects = self.current_room.get_solid_rects()
 
         for p in self.projectiles:
             if p.active:
                 p.update(dt)
+                if not p.is_exploding:
+                    if p.get_collision_rect().collidelist(solid_rects) != -1:
+                        p.explode()
 
-                # If the dynamic hitbox collides with a wall in the room, we deactivate the magic.
-                if p.get_collision_rect().collidelist(solid_rects) != -1:
-                    p.active = False
+        # Update the wave manager (spawns enemies automatically)
+        self.wave_manager.update(dt)
 
         # Colision logic for enemies
         for i in range(len(self.enemies) - 1, -1, -1):
@@ -161,7 +167,7 @@ class PlayState(BaseState):
             if enemy.is_dead:
                 self.enemies.pop(i)
                 continue
-                
+            enemy.solid_rects = solid_rects 
             enemy.update(dt)
             
             enemy_rect = pygame.Rect(enemy.x, enemy.y, enemy.width, enemy.height)
@@ -175,17 +181,34 @@ class PlayState(BaseState):
                         enemy.take_damage(self.player_damage)
                         self.particle_systems.append(BloodEffect(enemy.x + (enemy.width / 2), enemy.y + (enemy.height / 2)))
 
-            #Goblin attack
+            # Ranged enemy attack logic
             if getattr(enemy, 'just_fired', False):
                 enemy.just_fired = False 
                 for p in self.enemy_projectiles:
                     if not p.active:
-                        p.fire(enemy.shoot_x, enemy.shoot_y, enemy.shoot_angle, 9999, self.arrow_config)
+                        # Fetch the custom config from the enemy class
+                        # Provide a safe default just in case it's missing
+                        fallback_config = {'speed': 120, 'texture': 'arrow', 'frames': [0,1,2,3,4,5]}
+                        config = getattr(enemy, 'projectile_config', fallback_config)
+                        
+                        p.fire(enemy.shoot_x, enemy.shoot_y, enemy.shoot_angle, 9999, config)
                         break
         
         # Update arrows goblin
+        totem_rect = pygame.Rect(self.totem.x, self.totem.y, self.totem.width, self.totem.height)
+
         for p in self.enemy_projectiles:
-            p.update(dt)
+            if p.active:
+                p.update(dt)
+                if not p.is_exploding:
+                    p_rect = pygame.Rect(p.x - 5, p.y - 5, 10, 10)
+                    
+                    if totem_rect.colliderect(p_rect):
+                        p.explode(texture_id='sparkle', frames=[0, 1, 2, 3]) 
+                        self.totem.take_damage(1)
+                    elif p.get_collision_rect().collidelist(solid_rects) != -1:
+                        p.explode(texture_id='sparkle', frames=[0, 1, 2, 3])
+                
 
     def render(self, surface: pygame.Surface) -> None:
         surface.fill((30, 25, 45)) 
@@ -207,6 +230,17 @@ class PlayState(BaseState):
         #Render player
         self.player.render(surface)
 
+        # RENDER MANA 
+        bar_width = 30
+        bar_height = 4
+        bar_x = self.player.x + (self.player.width / 2) - (bar_width / 2)
+        bar_y = self.player.y + self.player.height + 4
+        mana_ratio = self.player.mana / self.player.max_mana
+        current_bar_width = max(0, int(bar_width * mana_ratio))
+        pygame.draw.rect(surface, (20, 20, 30), (bar_x, bar_y, bar_width, bar_height))
+        if current_bar_width > 0:
+            pygame.draw.rect(surface, (80, 150, 220), (bar_x, bar_y, current_bar_width, bar_height))
+
         #Render shot
         for p in self.projectiles:
             p.render(surface)
@@ -218,6 +252,26 @@ class PlayState(BaseState):
         # Render arrow goblin
         for p in self.enemy_projectiles:
             p.render(surface)
+
+        #Render heal
+        heart_img = settings.TEXTURES['heart']
+        full_heart = heart_img.subsurface(settings.FRAMES['heart_frames'][0])
+        empty_heart = heart_img.subsurface(settings.FRAMES['heart_frames'][2])
+        scale_mult = 2
+        new_width = full_heart.get_width() * scale_mult
+        new_height = full_heart.get_height() * scale_mult
+        
+        full_heart = pygame.transform.scale(full_heart, (new_width, new_height))
+        empty_heart = pygame.transform.scale(empty_heart, (new_width, new_height))
+        
+        for i in range(self.totem.max_hp):
+            hx = 10 + (i * (new_width + 4))
+            hy = 10
+            if i < self.totem.hp:
+                surface.blit(full_heart, (hx, hy))
+            else:
+                surface.blit(empty_heart, (hx, hy))
+
 
         #Cursor
         mx, my = pygame.mouse.get_pos()
