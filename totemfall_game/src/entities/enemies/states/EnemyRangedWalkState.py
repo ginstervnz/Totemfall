@@ -7,6 +7,8 @@ class EnemyRangedWalkState(BaseEntityState):
         self.entity.current_animation = self.entity.animations['walk']
 
     def update(self, dt: float) -> None:
+        if getattr(self.entity, 'is_spawning', False):
+            return
         if hasattr(self.entity, 'target'):
             
             center_x = self.entity.x + (self.entity.width / 2)

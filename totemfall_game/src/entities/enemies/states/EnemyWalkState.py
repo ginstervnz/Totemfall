@@ -7,6 +7,8 @@ class EnemyWalkState(BaseEntityState):
         self.entity.current_animation = self.entity.animations['walk']
 
     def update(self, dt: float) -> None:
+        if getattr(self.entity, 'is_spawning', False):
+            return
         if hasattr(self.entity, 'target'):
             
             enemy_rect = pygame.Rect(self.entity.x, self.entity.y, self.entity.width, self.entity.height)

@@ -22,6 +22,11 @@ class Player:
         self.mana_regen = 20.5
         self.is_exhausted = False
 
+        # Summoning stats
+        self.max_summons = 0
+        self.ally_bonus_damage = 0
+
+
         #Shot 
         self.fire_rate = 0.5 
         self.shoot_timer = self.fire_rate
@@ -41,6 +46,12 @@ class Player:
         self.hp = self.max_hp
         self.hit_flash_timer = 0
 
+        # --- EXPERIENCE SYSTEM ---
+        self.level = 1
+        self.current_xp = 0
+        # Formula: 100 * (Level ^ 1.5)
+        self.xp_to_next_level = 100
+
 
         self.animations = {
             'idle': Animation([0], 1), 
@@ -56,6 +67,25 @@ class Player:
 
     def change_animation(self, animation_id: str) -> None:
         self.current_animation = self.animations[animation_id]
+
+    def add_xp(self, amount: int) -> bool:
+        """Adds experience and handles leveling up."""
+        self.current_xp += amount
+        leveled_up = False
+        # While loop in case the player gains enough XP to level up multiple times
+        while self.current_xp >= self.xp_to_next_level:
+            self.current_xp -= self.xp_to_next_level
+            self.level += 1
+            
+            # Recalculate next level requirement using the exponential formula
+            self.xp_to_next_level = int(100 * (self.level ** 1.5))
+            
+            # Increase max mana on level up
+            self.max_mana += 10
+            self.mana = self.max_mana
+            leveled_up = True
+        return leveled_up
+
 
     def take_damage(self, amount: int) -> None:
         self.hp = max(0, self.hp - amount)
