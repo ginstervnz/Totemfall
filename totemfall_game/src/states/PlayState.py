@@ -5,7 +5,6 @@ from gale.state import BaseState
 from gale.particle_system import ParticleSystem
 from gale.timer import Timer
 from gale.input_handler import InputData
-from gale.timer import Timer
 from src.entities.DustEffect import DustEffect
 from src.entities.player.Player import Player
 from src.entities.Projectile import Projectile
@@ -508,6 +507,11 @@ class PlayState(BaseState):
             Timer.tween(0.8, [(new_ally.visuals, {"y": target_y})], ease_function_name="out_bounce", on_finish=on_ally_drop_finish)
             self.allies.append(new_ally)
 
+        for i in range(len(self.ally_cooldowns) - 1, -1, -1):
+            self.ally_cooldowns[i] -= scaled_dt
+            if self.ally_cooldowns[i] <= 0:
+                self.ally_cooldowns.pop(i)
+        
                 
 
     def render(self, surface: pygame.Surface) -> None:
@@ -617,7 +621,7 @@ class PlayState(BaseState):
             iris_surface.set_colorkey(COLOR_KEY)
             
             surface.blit(iris_surface, (0, 0))
-            
+
         # RENDER XP BAR 
         xp_frame_img = settings.TEXTURES['xp_frame']
         xp_fill_img = settings.TEXTURES['xp_fill']
