@@ -20,6 +20,7 @@ from gale import input_handler
 # with, mixer and font included -- and does so without raising if, say,
 # no audio device is available, unlike calling pygame.mixer.init() directly.
 
+input_handler.InputHandler.set_mouse_click_action(input_handler.MOUSE_BUTTON_1, 'click')
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_q, 'quit')
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RETURN, 'confirm')
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_RIGHT, 'right')
@@ -68,7 +69,17 @@ scaled_obelisk = pygame.transform.smoothscale(raw_obelisk, (new_width, new_heigh
 # TEXTURES = {
 #     'my_texture': pygame.image.load(BASE_DIR / "assets" / "graphics" / "my_texture.png")
 # }
+
+#UI bar texture
+ui_sheet = pygame.image.load(BASE_DIR / "assets" / "graphics" / "UI_Bars.png")
+
+FRAME_RECT = pygame.Rect(197, 135, 86, 15)
+FILL_RECT = pygame.Rect(296, 144, 81, 4)
+
+#All textures 
 TEXTURES = {
+    'xp_frame': ui_sheet.subsurface(FRAME_RECT).copy(),
+    'xp_fill': ui_sheet.subsurface(FILL_RECT).copy(),
     'wizard': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprWizard.png"),
     'stairs': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprStairs.png"),
     'cursor': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprCursor.png"),
@@ -89,6 +100,7 @@ TEXTURES = {
     'water': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprWater.png"),
     'heart': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprHeart.png"),
     'sparkle': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack" / "sprSparkle.png"),
+    'sparkle_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack" / "sprHealParticle.png"),
     'goblin_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters" / "sprOrcArcher2.png"),
     'goblin_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters" / "sprOrcArcher3.png"),
     'batilisk_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprBatilisk2.png"),
@@ -114,6 +126,23 @@ TEXTURES = {
     'goblin2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprGoblin1.png"),
     'goblin2_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprGoblin2.png"),
     'goblin2_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprGoblin3.png"),
+    'card_base': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/ "base1.png"),
+    'card_base_2': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/ "base20.png"),
+    'card_base_3': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/ "base8.png"),
+    'card_base_4': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/ "base17.png"),
+    'card_base_5': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/ "base19.png"),
+    'card_base_6': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/ "base16.png"),
+    'card_base_7': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/ "base18.png"),
+    'icon_attack_damage': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "attack_boost.png"),
+    'icon_speed_up': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "swiftness.png"),
+    'icon_mana_reduce': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "glow.png"),
+    'icon_atk_speed_up': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "attack_speed_boost.png"),
+    'icon_mana_up': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "mana_up.png"),
+    'icon_shoot_speed': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "shoot_speed.png"),
+    'icon_regeneration_mana': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "regeneration.png"),
+    'icon_heal_totem': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "heal_totem.png"),
+    'icon_XP_boost': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "exp_boost.png"),
+    'xp_orb': pygame.image.load(BASE_DIR / "assets" / "graphics" / "exp_orb.png"),
     'obelisk': scaled_obelisk,
 }
 
@@ -142,6 +171,7 @@ FRAMES = {
     'water': frames.generate_frames(TEXTURES['water'], 20, 20),
     'heart_frames': frames.generate_frames(TEXTURES['heart'], 6, 4),
     'sparkle_frames': frames.generate_frames(TEXTURES['sparkle'], 7, 7),
+    'sparkle_2_frames': frames.generate_frames(TEXTURES['sparkle_2'], 6, 6),
     'goblin_2_frames': frames.generate_frames(TEXTURES['goblin_2'], 20,18 ),
     'goblin_3_frames': frames.generate_frames(TEXTURES['goblin_3'], 20,18 ),
     'batilisk_2_frames': frames.generate_frames(TEXTURES['batilisk_2'], 25,25 ),
@@ -167,7 +197,23 @@ FRAMES = {
     'goblin2_frames': frames.generate_frames(TEXTURES['goblin2'], 25,25 ),
     'goblin2_2_frames': frames.generate_frames(TEXTURES['goblin2_2'], 25,25 ),
     'goblin2_3_frames': frames.generate_frames(TEXTURES['goblin2_3'], 25,25 ),
-
+    'card_base_frames': frames.generate_frames(TEXTURES['card_base'], 64,96 ),
+    'card_base_2_frames': frames.generate_frames(TEXTURES['card_base_2'], 64,96 ),
+    'card_base_3_frames': frames.generate_frames(TEXTURES['card_base_3'], 64,96 ),
+    'card_base_4_frames': frames.generate_frames(TEXTURES['card_base_4'], 64,96 ),
+    'card_base_5_frames': frames.generate_frames(TEXTURES['card_base_5'], 64,96 ),
+    'card_base_6_frames': frames.generate_frames(TEXTURES['card_base_6'], 64,96 ),
+    'card_base_7_frames': frames.generate_frames(TEXTURES['card_base_7'], 64,96 ),
+    'icon_attack_damage_frames': frames.generate_frames(TEXTURES['icon_attack_damage'], 16,16 ),
+    'icon_atk_speed_up_frames': frames.generate_frames(TEXTURES['icon_atk_speed_up'], 16,16 ),
+    'icon_speed_up_frames': frames.generate_frames(TEXTURES['icon_speed_up'], 16,16 ),
+    'icon_mana_up_frames': frames.generate_frames(TEXTURES['icon_mana_up'], 16,16 ),
+    'icon_mana_reduce_frames': frames.generate_frames(TEXTURES['icon_mana_reduce'], 16,16 ),
+    'icon_shoot_speed_frames': frames.generate_frames(TEXTURES['icon_shoot_speed'], 16,16 ),
+    'icon_regeneration_mana_frames': frames.generate_frames(TEXTURES['icon_regeneration_mana'], 16,16 ),
+    'icon_heal_totem_frames': frames.generate_frames(TEXTURES['icon_heal_totem'], 16,16 ),
+    'icon_XP_boost_frames': frames.generate_frames(TEXTURES['icon_XP_boost'], 16,16 ),
+    'xp_orb_frames': frames.generate_frames(TEXTURES['xp_orb'], 6, 6),
 }
 
 # Register your sound from the sounds folder, for instance:

@@ -1,14 +1,18 @@
 import random
 import settings
 import pygame
+from gale.timer import Timer
+from src.entities.DustEffect import DustEffect
+
 
 
 class WaveManager:
-    def __init__(self, enemy_list: list, totem,current_room) -> None:
+    def __init__(self, enemy_list: list, totem,current_room,particle_systems: list) -> None:
         # We hold a reference to the PlayState's enemy list and totem
         self.enemy_list = enemy_list
         self.totem = totem
         self.current_room = current_room
+        self.particle_systems = particle_systems
         self.is_active = False
         
         # Wave stats
@@ -86,7 +90,15 @@ class WaveManager:
         # If we found a valid spot, place the enemy and activate it
         if valid_spawn:
             new_enemy.x = spawn_x
-            new_enemy.y = spawn_y
+            new_enemy.y = spawn_y - 200 # Spawn high in the sky
             new_enemy.target = self.totem
             self.enemy_list.append(new_enemy)
+            new_enemy.is_spawning = True
+            def on_drop_finish(entity=new_enemy):
+                entity.is_spawning = False
+                dust_x = entity.x + (entity.width / 2)
+                dust_y = entity.y + entity.height
+                self.particle_systems.append(DustEffect(dust_x, dust_y))
+            # JUICE: ENEMY SPAWN DROP 
+            Timer.tween(0.8, [(new_enemy, {"y": spawn_y})], ease_function_name="out_bounce", on_finish=on_drop_finish)
         

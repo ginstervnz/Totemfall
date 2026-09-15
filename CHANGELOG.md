@@ -48,3 +48,16 @@ Todas las adiciones, cambios y correcciones de este proyecto serán documentadas
 - **Arquitectura Procedural para la generacion de enemigos:** Cracion de la clase `WaveManager.py` que gestiona la generacion de los enemigos en el nivel.
 - **Algoritmos de Mapas con enemigos:** Implementación de tipos especificos de enemigos por tipo de mundo.
 - **Agregado de los tipos de enmigos:** Implementacion de los diferentes mounstros que va a tener el juego.
+- **Agregado tipos de cartas:** Implementacion de los diferentes tipos de cartas que daran poderes al jugador.
+
+## [v0.4.0] - Sistema de Invocación, UI "Juice" y Efectos Visuales
+
+### Añadido
+- **Efectos de Interfaz (Juice) para Cartas:** Implementación de animaciones de entrada (`tweening`), escalado dinámico al pasar el cursor con marco dorado, partículas mágicas integradas y auto-ajuste inteligente de texto.
+- **Manipulación del Tiempo (Slow-Mo):** Agregado un efecto de dilatación temporal que ralentiza la acción al elegir una mejora y recupera la velocidad gradualmente al reanudar el combate.
+- **Vórtices de Experiencia Animados:** Creacion de los orbes de exp usando texturas animadas utilizando el sistema de animaciones del framework.
+- **Sistema de Invocación de Aliados:** Creación de la clase proxy `Ally.py`, capaz de clonar cualquier enemigo del nivel actual, sobrescribiendo su IA para que defienda al jugador (marcado con un diamante azul).
+- **Mazo de Cartas Evolutivo:** El gestor de cartas ahora inyecta opciones avanzadas (daño extra para aliados y ranuras de invocación adicionales) únicamente después de que el jugador desbloquea la habilidad base.
+- **Formaciones Defensivas Tácticas:** Los monstruos aliados transicionan a un "Modo Guardián", marchando hacia posiciones de escolta predefinidas frente al obelisco cuando se limpia la oleada.
+- **Sistema de Aggro Dinámico e Intercepción:** Los enemigos evalúan la distancia en tiempo real para priorizar el combate contra los aliados más cercanos en lugar del obelisco. Los proyectiles enemigos ahora también impactan y dañan a las invocaciones.
+- **Animaciones de Aparición (Spawn Drop):** Tanto enemigos como aliados ingresan al campo de batalla cayendo desde el cielo con un efecto de rebote, detonando un nuevo sistema de partículas de impacto (`DustEffect.py`) al tocar el suelo.

@@ -1,9 +1,16 @@
 import pygame
+import random
+import math
 from gale.state import BaseState
 from gale.particle_system import ParticleSystem
 from gale.input_handler import InputData
+from gale.timer import Timer
+from src.entities.DustEffect import DustEffect
 from src.entities.player.Player import Player
 from src.entities.Projectile import Projectile
+from src.entities.CardManager import CardManager
+from src.entities.ExpOrb import ExpOrb
+from src.entities.Ally import Ally
 from src.entities.Totem import Totem
 from src.world.waves.WaveManager import WaveManager
 from src.world.SwampRoom import SwampRoom
@@ -49,6 +56,11 @@ class PlayState(BaseState):
         pygame.mouse.set_visible(False)
         self.cursor_frame = 3
 
+        # Particle
+        self.particle_systems = []
+        self.player_damage = 5
+        self.level_cooldown = 0
+
         #Number for projectiles Player
         self.projectiles = [Projectile() for _ in range(50)]
         #Nuber for projectiles Enemy
@@ -61,13 +73,27 @@ class PlayState(BaseState):
 
         self.enemies = []
         # Initialize the manager
-        self.wave_manager = WaveManager(self.enemies, self.totem, self.current_room)
+        self.wave_manager = WaveManager(self.enemies, self.totem, self.current_room,self.particle_systems)
         self.wave_manager.start_wave(self.current_level)
 
-        # Don't erase
-        self.particle_systems = []
-        self.player_damage = 5
-        self.level_cooldown = 0
+        # LEVEL UP OVERLAY SYSTEM 
+        self.card_manager = CardManager()
+        self.is_leveling_up = False
+        self.active_cards = []
+        self.exp_orbs = []
+
+        #Animation Card
+        self.is_leveling_up = False
+        self.active_cards = []
+        self.is_card_animating = False # True blocks clicks during intro/outro
+        self.time_scale = 1.0 # 1.0 is normal speed, 0.2 is slow-mo
+
+        #Summon
+        self.allies = []
+        self.ally_cooldowns = [] # Stores timers for dead allies
+        self.summon_mana_cost = 40.0        
+
+        
 
         
 
@@ -107,9 +133,61 @@ class PlayState(BaseState):
 
 
     def update(self, dt: float) -> None:
-        self.totem.update(dt)
-        self.player.update(dt)
-        self.current_room.update(dt)
+
+        # LEVEL UP FREEZE LOGIC 
+        if getattr(self, 'is_leveling_up', False):
+            pygame.mouse.set_visible(True)
+            
+            # Get virtual mouse position
+            mx, my = pygame.mouse.get_pos()
+            virtual_mx = mx * (settings.VIRTUAL_WIDTH / settings.WINDOW_WIDTH)
+            virtual_my = my * (settings.VIRTUAL_HEIGHT / settings.WINDOW_HEIGHT)
+            
+            # Update hover states
+            for card in self.active_cards:
+                card.update(virtual_mx, virtual_my, dt)
+                
+            # DO NOT update enemies, player, or projectiles while frozen
+            return
+        scaled_dt = dt * getattr(self, 'time_scale', 1.0)
+
+        self.totem.update(scaled_dt)
+        self.player.update(scaled_dt)
+        self.current_room.update(scaled_dt)
+
+        # UPDATE EXP ORBS
+        totem_center_x = self.totem.x + (self.totem.width / 2)
+        totem_center_y = self.totem.y + (self.totem.height / 2)
+
+        for orb in reversed(self.exp_orbs):
+            orb.update(scaled_dt, totem_center_x, totem_center_y)
+
+            # Check collision with Totem center
+            dist = math.hypot(totem_center_x - orb.x, totem_center_y - orb.y)
+            if dist < 15: # Collision threshold
+                orb.active = False
+
+                # Add XP and check for level up!
+                if self.player.add_xp(orb.xp_value):
+                        self.is_leveling_up = True
+                        self.is_card_animating = True # Block interactions
+                        self.active_cards = self.card_manager.get_random_hand(3)
+                        
+                        # INTRO TWEEN 
+                        # Target Y is the center of the screen
+                        target_y = (settings.VIRTUAL_HEIGHT / 2) - 54 
+                        
+                        tweens = []
+                        for card in self.active_cards:
+                            tweens.append((card, {"y": target_y}))
+                            
+                        # Animate all cards rising simultaneously with a bouncy effect
+                        Timer.tween(0.8, tweens, ease_function_name="out_bounce", 
+                                    on_finish=lambda: setattr(self, 'is_card_animating', False))
+
+        # Remove inactive orbs
+        self.exp_orbs = [o for o in self.exp_orbs if o.active]
+
 
         #Gameover
         if self.totem.hp <= 0:
@@ -123,11 +201,11 @@ class PlayState(BaseState):
 
 
         if self.level_cooldown > 0:
-            self.level_cooldown -= dt
+            self.level_cooldown -= scaled_dt
 
         #Particle 
         for i in range(len(self.particle_systems) - 1, -1, -1):
-            self.particle_systems[i].update(dt)
+            self.particle_systems[i].update(scaled_dt)
             if not self.particle_systems[i].active:
                 self.particle_systems.pop(i)
 
@@ -152,13 +230,13 @@ class PlayState(BaseState):
 
         for p in self.projectiles:
             if p.active:
-                p.update(dt)
+                p.update(scaled_dt)
                 if not p.is_exploding:
                     if p.get_collision_rect().collidelist(solid_rects) != -1:
                         p.explode()
 
         # Update the wave manager (spawns enemies automatically)
-        self.wave_manager.update(dt)
+        self.wave_manager.update(scaled_dt)
 
         # Colision logic for enemies
         for i in range(len(self.enemies) - 1, -1, -1):
@@ -167,11 +245,27 @@ class PlayState(BaseState):
             if enemy.is_dead:
                 self.enemies.pop(i)
                 continue
+            best_target = self.totem
+            min_dist = math.hypot(self.totem.x - enemy.x, self.totem.y - enemy.y)
+
+            for ally in getattr(self, 'allies', []):
+                if not getattr(ally, 'is_dead', False):
+                    dist = math.hypot(ally.x - enemy.x, ally.y - enemy.y)
+                    if dist < min_dist:
+                        min_dist = dist
+                        best_target = ally
+            
+            enemy.target = best_target
+            
             enemy.solid_rects = solid_rects 
-            enemy.update(dt)
+            enemy.update(scaled_dt)
+
+
+            enemy.update(scaled_dt)
             
             enemy_rect = pygame.Rect(enemy.x, enemy.y, enemy.width, enemy.height)
-            
+
+            #Shoot check
             for p in self.projectiles:
                 if p.active and not p.is_exploding:
                     p_rect = pygame.Rect(p.x - 5, p.y - 5, 10, 10)
@@ -180,6 +274,13 @@ class PlayState(BaseState):
                         p.explode()
                         enemy.take_damage(self.player_damage)
                         self.particle_systems.append(BloodEffect(enemy.x + (enemy.width / 2), enemy.y + (enemy.height / 2)))
+
+                        # XP REWARD ON DEATH 
+                        if enemy.hp <= 0:
+                            #Logic for xp 
+                            xp_reward = random.randint(1000, 2000) * self.current_level
+                            self.exp_orbs.append(ExpOrb(enemy.x, enemy.y, xp_reward))
+
 
             # Ranged enemy attack logic
             if getattr(enemy, 'just_fired', False):
@@ -199,15 +300,91 @@ class PlayState(BaseState):
 
         for p in self.enemy_projectiles:
             if p.active:
-                p.update(dt)
+                p.update(scaled_dt)
                 if not p.is_exploding:
                     p_rect = pygame.Rect(p.x - 5, p.y - 5, 10, 10)
                     
+                    # Check collision with Totem
                     if totem_rect.colliderect(p_rect):
                         p.explode(texture_id='sparkle', frames=[0, 1, 2, 3]) 
                         self.totem.take_damage(1)
-                    elif p.get_collision_rect().collidelist(solid_rects) != -1:
+                        continue
+                        
+                    # Check collision with Allies
+                    hit_ally = False
+                    for ally in getattr(self, 'allies', []):
+                        if not ally.is_dead:
+                            ally_rect = pygame.Rect(ally.x, ally.y, ally.width, ally.height)
+                            if ally_rect.colliderect(p_rect):
+                                p.explode(texture_id='sparkle', frames=[0, 1, 2, 3])
+                                ally.take_damage(1) # Enemy arrow damage
+                                hit_ally = True
+                                self.particle_systems.append(BloodEffect(ally.x + (ally.width / 2), ally.y + (ally.height / 2)))
+                                break 
+                                
+                    if hit_ally:
+                        continue
+
+                    # Check collision with Walls
+                    if p.get_collision_rect().collidelist(solid_rects) != -1:
                         p.explode(texture_id='sparkle', frames=[0, 1, 2, 3])
+
+        # Update cooldown timers for dead allies
+        for i in range(len(self.allies) - 1, -1, -1):
+            ally = self.allies[i]
+            ally.update(scaled_dt, self.enemies, self.totem, self.allies)
+            
+            if ally.is_dead:
+                self.ally_cooldowns.append(15.0) 
+                self.allies.pop(i)
+                continue
+                
+            # Intercept Ranged Attacks
+            if getattr(ally.visuals, 'just_fired', False):
+                ally.visuals.just_fired = False 
+                # Use friendly projectiles so they hurt enemies!
+                for p in self.projectiles:
+                    if not p.active:
+                        fallback = {'speed': 150, 'texture': 'arrow', 'frames': [0,1,2,3,4,5]}
+                        config = getattr(ally.visuals, 'projectile_config', fallback)
+                        p.fire(ally.visuals.shoot_x, ally.visuals.shoot_y, ally.visuals.shoot_angle, 9999, config)
+                        break
+
+        # Check if we can summon automatically
+        active_allies = len(getattr(self, 'allies', []))
+        recovering_slots = len(getattr(self, 'ally_cooldowns', []))
+        
+        # Use getattr to prevent crashes if the player hasn't unlocked the stat yet
+        max_summons = getattr(self.player, 'max_summons', 0)
+        available_slots = max_summons - active_allies - recovering_slots
+        
+        if not hasattr(self, 'summon_mana_cost'):
+            self.summon_mana_cost = 40.0
+        
+        if available_slots > 0 and self.player.mana >= self.summon_mana_cost:
+            self.player.mana -= self.summon_mana_cost
+            
+            EnemyClass = random.choice(self.current_room.allowed_enemies)
+            
+            offset_x = random.choice([-30, self.totem.width + 30])
+            spawn_x = self.totem.x + offset_x
+            
+            enemy_template = EnemyClass(spawn_x, self.totem.y)
+            
+            new_ally = Ally(spawn_x, self.totem.y, enemy_template, getattr(self.player, 'ally_bonus_damage', 0))
+            target_y = self.totem.y
+            new_ally.visuals.y = target_y - 200
+            new_ally.visuals.is_spawning = True
+
+            def on_ally_drop_finish(ally_obj=new_ally):
+                ally_obj.visuals.is_spawning = False
+                dust_x = ally_obj.x + (ally_obj.width / 2)
+                dust_y = ally_obj.y + ally_obj.height
+                self.particle_systems.append(DustEffect(dust_x, dust_y))
+            
+            Timer.tween(0.8, [(new_ally.visuals, {"y": target_y})], ease_function_name="out_bounce", on_finish=on_ally_drop_finish)
+            self.allies.append(new_ally)
+
                 
 
     def render(self, surface: pygame.Surface) -> None:
@@ -226,6 +403,11 @@ class PlayState(BaseState):
         #Render enemy
         for enemy in self.enemies:
             enemy.render(surface)
+
+        #Render Ally
+        for ally in getattr(self, 'allies', []):
+            ally.render(surface)
+
 
         #Render player
         self.player.render(surface)
@@ -247,6 +429,10 @@ class PlayState(BaseState):
 
         # Render Particle
         for ps in self.particle_systems:
+            ps.render(surface)
+
+        # Render EXP orb
+        for ps in self.exp_orbs:
             ps.render(surface)
 
         # Render arrow goblin
@@ -272,18 +458,95 @@ class PlayState(BaseState):
             else:
                 surface.blit(empty_heart, (hx, hy))
 
+        # RENDER XP BAR 
+        xp_frame_img = settings.TEXTURES['xp_frame']
+        xp_fill_img = settings.TEXTURES['xp_fill']
+        padding = 10
+        bar_x = settings.VIRTUAL_WIDTH - xp_frame_img.get_width() - padding
+        bar_y = padding
+        
+        # Calculate the ratio of current XP to Next Level XP
+        xp_ratio = self.player.current_xp / self.player.xp_to_next_level
+        
+        # Calculate how many pixels wide the blue fill should be
+        max_fill_width = xp_fill_img.get_width()
+        current_fill_width = max(1, int(max_fill_width * xp_ratio))
+        
+        # Draw the empty frame first
+        surface.blit(xp_frame_img, (bar_x, bar_y))
+        
+        # Crop the blue fill dynamically based on XP ratio
+        if self.player.current_xp > 0:
+            fill_rect = pygame.Rect(0, 0, current_fill_width, xp_fill_img.get_height())
+            dynamic_fill_surface = xp_fill_img.subsurface(fill_rect)
+            
+            # Blit the fill inside the frame 
+            surface.blit(dynamic_fill_surface, (bar_x + 2, bar_y + 9))
 
-        #Cursor
-        mx, my = pygame.mouse.get_pos()
-        virtual_mx = mx * (settings.VIRTUAL_WIDTH / settings.WINDOW_WIDTH)
-        virtual_my = my * (settings.VIRTUAL_HEIGHT / settings.WINDOW_HEIGHT)
-        cursor_img = settings.TEXTURES['cursor']
-        frame_rect = settings.FRAMES['cursor_frames'][self.cursor_frame]
-        cursor_surf = cursor_img.subsurface(frame_rect)
-        surface.blit(cursor_surf, (virtual_mx - (frame_rect.width / 2), virtual_my - (frame_rect.height / 2)))
+        # RENDER LEVEL UP OVERLAY
+        if getattr(self, 'is_leveling_up', False):
+            # Draw a dark semi-transparent overlay
+            overlay = pygame.Surface((settings.VIRTUAL_WIDTH, settings.VIRTUAL_HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 120))
+            surface.blit(overlay, (0, 0))
+            
+            # Render all 3 cards on top
+            for card in self.active_cards:
+                card.render(surface)
+        
+        else: 
+            # Cursor
+            mx, my = pygame.mouse.get_pos()
+            virtual_mx = mx * (settings.VIRTUAL_WIDTH / settings.WINDOW_WIDTH)
+            virtual_my = my * (settings.VIRTUAL_HEIGHT / settings.WINDOW_HEIGHT)
+            cursor_img = settings.TEXTURES['cursor']
+            frame_rect = settings.FRAMES['cursor_frames'][self.cursor_frame]
+            cursor_surf = cursor_img.subsurface(frame_rect)
+            surface.blit(cursor_surf, (virtual_mx - (frame_rect.width / 2), virtual_my - (frame_rect.height / 2)))
+
 
         
     def on_input(self, input_id: str, input_data: InputData) -> None:
+
+        #  CLICK LOGIC FOR CARDS 
+        if self.is_leveling_up and not getattr(self, 'is_card_animating', False):
+            if input_id == 'click' and input_data.pressed:
+                for card in self.active_cards:
+                    if card.is_hovered:
+                        # Lock everything
+                        self.is_card_animating = True
+                        for c in self.active_cards:
+                            c.locked = True
+                        
+                        # OUTRO TWEEN 
+                        center_x = (settings.VIRTUAL_WIDTH / 2) - (card.width / 2)
+                        center_y = (settings.VIRTUAL_HEIGHT / 2) - (card.height / 2)
+                        
+                        tweens = []
+                        for c in self.active_cards:
+                            if c == card:
+                                # Selected card zooms in and goes to center
+                                tweens.append((c, {"x": center_x, "y": center_y, "scale": 1.5}))
+                            else:
+                                # Unselected cards fall off screen
+                                tweens.append((c, {"y": settings.VIRTUAL_HEIGHT + 150}))
+                        
+                        # What happens when the outro animation finishes:
+                        def finish_outro():
+                            card.apply_effect(self.player, self)
+                            self.is_leveling_up = False
+                            self.is_card_animating = False
+                            self.active_cards.clear()
+                            pygame.mouse.set_visible(False)
+                            
+                            #  SLOW MOTION EFFECT 
+                            self.time_scale = 0.2 # Enter The Matrix
+                            Timer.tween(1.5, [(self, {"time_scale": 1.0})], ease_function_name="in_out_cubic")
+                            
+                        # Start the outro animation
+                        Timer.tween(0.6, tweens, ease_function_name="out_cubic", on_finish=finish_outro)
+                        break
+
         if input_id == 'quit' and input_data.pressed:
             pygame.mouse.set_visible(True)
             self.state_machine.change('main_menu')

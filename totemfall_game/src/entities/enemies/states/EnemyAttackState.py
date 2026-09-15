@@ -20,6 +20,22 @@ class EnemyAttackState(BaseEntityState):
 
     def update(self, dt: float) -> None:
         self.timer -= dt
+        if hasattr(self.entity, 'target') and self.entity.target:
+            enemy_rect = pygame.Rect(self.entity.x, self.entity.y, self.entity.width, self.entity.height)
+            t_width = getattr(self.entity.target, 'width', 32)
+            t_height = getattr(self.entity.target, 'height', 32)
+            target_rect = pygame.Rect(self.entity.target.x, self.entity.target.y, t_width, t_height)
+            
+            
+            if not self.is_swinging and not enemy_rect.colliderect(target_rect):
+                self.entity.state_machine.change('walk')
+                return
+        else:
+            
+            if not self.is_swinging:
+                self.entity.state_machine.change('walk')
+                return
+
         
         if self.is_swinging:
             self.swing_animation.update(dt)
@@ -36,7 +52,8 @@ class EnemyAttackState(BaseEntityState):
             self.timer = self.attack_rate
             self.is_swinging = True
             self.swing_animation = Animation([0, 1, 2, 3], 0.05)
-            self.has_damaged = False 
+            self.has_damaged = False
+
 
     def render(self, surface: pygame.Surface) -> None:
         if self.is_swinging and hasattr(self.entity, 'target'):
