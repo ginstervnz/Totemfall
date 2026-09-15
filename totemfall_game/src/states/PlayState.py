@@ -46,12 +46,31 @@ class BloodEffect:
 class PlayState(BaseState):
     def enter(self) -> None:
         self.platform_y = 22 
+        
         totem_x = (settings.VIRTUAL_WIDTH // 2) - 19
-        totem_y = self.platform_y - 24 
-        self.totem = Totem(totem_x, totem_y)
         wizard_x = settings.VIRTUAL_WIDTH // 2
-        wizard_y = self.platform_y + 11
-        self.player = Player(wizard_x, wizard_y)
+        
+        # Target positions on the ground
+        target_totem_y = self.platform_y - 24 
+        target_wizard_y = self.platform_y + 11
+        
+        # START HIGH UP IN THE SKY 
+        self.totem = Totem(totem_x, -150)
+        self.player = Player(wizard_x, -150)
+        
+        # NEW INITIAL FADE-IN & DROP EFFECT 
+        self.transition_alpha = 255.0
+        
+        # 1. Fade the screen from black to clear over 1.5 seconds
+        Timer.tween(1.5, [(self, {'transition_alpha': 0.0})])
+        
+        # 2. Drop the characters gently onto the platform
+        Timer.tween(1.0, [
+            (self.totem, {'y': target_totem_y}),
+            (self.player, {'y': target_wizard_y})
+        ])
+
+        
         self.kill_counts = {}
 
         # Cursor
@@ -127,6 +146,9 @@ class PlayState(BaseState):
         self.current_level += 1
         self.totem.hp = self.totem.max_hp
 
+        # --- FIX: Clean up the previous army before the new drop ---
+        self.allies.clear()
+        self.ally_cooldowns.clear()
 
         # Landing drop effect in the new level
         target_totem_y = self.platform_y - 24 
@@ -136,7 +158,9 @@ class PlayState(BaseState):
         self.totem.y = -150
         self.player.y = -150
 
-        self.transition_radius = 0.0
+        # --- ALPHA FADE-IN ---
+        # The screen should be fully black right now from the victory cinematic.
+        self.transition_alpha = 255.0
 
         # And we lower them gently onto their platform in one second.
         Timer.tween(1.0, [
@@ -144,8 +168,9 @@ class PlayState(BaseState):
             (self.player, {'y': target_wizard_y})
         ])
 
+        # Fade the screen from black (255) to clear (0)
         Timer.tween(1.5, [
-            (self, {'transition_radius': 350.0})
+            (self, {'transition_alpha': 0.0})
         ])
 
         # If we hit level 9 or 17, swap the entire world class
@@ -245,10 +270,10 @@ class PlayState(BaseState):
             Timer.tween(1.5, [
                 (self.totem, {'y': self.totem.y + 100})
             ])
-            
-            # Fade Out
+                
+            # Fade OUT to black (255) before changing to GameOverState
             Timer.tween(2.0, [
-                (self, {'transition_radius': 0.0})
+                (self, {'transition_alpha': 255.0})
             ])
 
         # TIME FREEZE
@@ -293,6 +318,7 @@ class PlayState(BaseState):
                     for p in self.projectiles:
                         if not p.active:
                             p.fire(self.player.shoot_x, self.player.shoot_y, self.player.shoot_angle, self.player.shoot_target_dist, self.player.projectile_config)
+                            p.source_ally = None 
                             break
                 else:
                     if self.player.is_exhausted:
@@ -321,6 +347,24 @@ class PlayState(BaseState):
         # Colision logic for enemies
         for i in range(len(self.enemies) - 1, -1, -1):
             enemy = self.enemies[i]
+
+          # --- INSTA-KILL ZONE (FAILSAFE) ---
+            if not getattr(enemy, 'is_spawning', False):
+                # Calculate the exact pixel borders of the procedural map
+                map_left = settings.MAP_RENDER_OFFSET_X
+                map_right = settings.MAP_RENDER_OFFSET_X + (settings.MAP_WIDTH * settings.TILE_SIZE)
+                map_top = settings.MAP_RENDER_OFFSET_Y
+                map_bottom = settings.MAP_RENDER_OFFSET_Y + (settings.MAP_HEIGHT * settings.TILE_SIZE_Y)
+                
+                # We use the center of the enemy to be precise
+                cx = enemy.x + (enemy.width / 2)
+                cy = enemy.y + (enemy.height / 2)
+                
+                # If they glitch into the outer black void or deep into the border walls...
+                if cx < map_left or cx > map_right or cy < map_top or cy > map_bottom:
+                    self.enemies.pop(i) # Silent execution
+                    self.wave_manager.enemies_to_spawn += 1 # Refund the spawn ticket
+                    continue
             
             if enemy.is_dead:
                 tex_id = getattr(enemy, 'texture_id', 'goblin')
@@ -342,15 +386,14 @@ class PlayState(BaseState):
                 self.particle_systems.append(BloodEffect(px, py))
               
             best_target = self.totem
-            min_dist = math.hypot(self.totem.x - enemy.x, self.totem.y - enemy.y)
-
-            for ally in getattr(self, 'allies', []):
-                if not getattr(ally, 'is_dead', False):
-                    dist = math.hypot(ally.x - enemy.x, ally.y - enemy.y)
-                    if dist < min_dist:
-                        min_dist = dist
-                        best_target = ally
-            
+            # Check if this enemy was provoked by an ally
+            if hasattr(enemy, 'aggro_target') and enemy.aggro_target is not None:
+                if not getattr(enemy.aggro_target, 'is_dead', False):
+                    # Ally is alive, seek revenge!
+                    best_target = enemy.aggro_target
+                else:
+                    # The ally died, forgive and return to attacking the Totem
+                    enemy.aggro_target = None
             enemy.target = best_target
             
             enemy.solid_rects = solid_rects 
@@ -363,10 +406,14 @@ class PlayState(BaseState):
                 if p.active and not p.is_exploding:
                     p_rect = pygame.Rect(p.x - 5, p.y - 5, 10, 10)
                     
-                    if enemy_rect.colliderect(p_rect):
+                    if enemy_rect.colliderect(p_rect) and not getattr(enemy, 'is_spawning', False):
                         p.explode()
                         enemy.take_damage(self.player_damage)
                         self.particle_systems.append(BloodEffect(enemy.x + (enemy.width / 2), enemy.y + (enemy.height / 2)))
+
+                        # If hit by an ally's arrow, get mad at them!
+                        if hasattr(p, 'source_ally') and p.source_ally is not None:
+                            enemy.aggro_target = p.source_ally
 
                         # XP REWARD ON DEATH 
                         if enemy.hp <= 0:
@@ -422,7 +469,7 @@ class PlayState(BaseState):
                     if p.get_collision_rect().collidelist(solid_rects) != -1:
                         p.explode(texture_id='sparkle', frames=[0, 1, 2, 3])
 
-        if not self.wave_manager.is_active and len(self.enemies) == 0:
+        if not self.wave_manager.is_active and len(self.enemies) == 0 and len(self.exp_orbs) == 0 and not getattr(self, 'is_leveling_up', False) and not getattr(self, 'is_card_animating', False):
 
             # We detect the moment they win in order to trigger the cinematic sequence.
             if not getattr(self, 'is_transitioning', False):
@@ -440,21 +487,22 @@ class PlayState(BaseState):
                     (self.totem, {'y': -100}),
                     (self.player, {'y': -100})
                 ])
+                
+                # --- FIX: Changed transition_radius to transition_alpha ---
                 Timer.tween(2.5, [
-                    (self, {'transition_radius': 0.0})
+                    (self, {'transition_alpha': 255.0})
                 ])
 
             # Once the cooldown ends and the characters are no longer visible, we switch maps.
             if self.level_cooldown <= 0:
                 self.advance_level()
-                print(f"¡Nivel completado! Avanzando al nivel: {self.current_level}")
+                print(f"Level completed! Advancing to level: {self.current_level}")
                 self.is_transitioning = False
-
-
+        
         # Update cooldown timers for dead allies
         for i in range(len(self.allies) - 1, -1, -1):
             ally = self.allies[i]
-            ally.update(scaled_dt, self.enemies, self.totem, self.allies)
+            ally.update(scaled_dt, self.enemies, self.totem, self.allies, solid_rects)
             
             if ally.is_dead:
                 self.ally_cooldowns.append(15.0) 
@@ -470,6 +518,7 @@ class PlayState(BaseState):
                         fallback = {'speed': 150, 'texture': 'arrow', 'frames': [0,1,2,3,4,5]}
                         config = getattr(ally.visuals, 'projectile_config', fallback)
                         p.fire(ally.visuals.shoot_x, ally.visuals.shoot_y, ally.visuals.shoot_angle, 9999, config)
+                        p.source_ally = ally 
                         break
 
         # Check if we can summon automatically
@@ -602,26 +651,6 @@ class PlayState(BaseState):
             pygame.draw.rect(surface, (255, 0, 0), rect, 1)
 
 
-
-        # Cinematic Effect (Iris Wipe)
-        if hasattr(self, 'transition_radius') and self.transition_radius < 350:
-            # We created a completely black "curtain" the size of the screen.
-            iris_surface = pygame.Surface((settings.VIRTUAL_WIDTH, settings.VIRTUAL_HEIGHT))
-            iris_surface.fill((0, 0, 0))
-            
-            center_x = settings.VIRTUAL_WIDTH // 2
-            center_y = settings.VIRTUAL_HEIGHT // 2
-            
-            # We avoid mathematical errors if the radius becomes negative due to decimal values
-            safe_radius = max(0, int(self.transition_radius))
-            
-            # We draw a magenta circle (or any bright color).
-            COLOR_KEY = (255, 0, 255)
-            pygame.draw.circle(iris_surface, COLOR_KEY, (center_x, center_y), safe_radius)
-            iris_surface.set_colorkey(COLOR_KEY)
-            
-            surface.blit(iris_surface, (0, 0))
-
         # RENDER XP BAR 
         xp_frame_img = settings.TEXTURES['xp_frame']
         xp_fill_img = settings.TEXTURES['xp_fill']
@@ -668,7 +697,13 @@ class PlayState(BaseState):
             cursor_surf = cursor_img.subsurface(frame_rect)
             surface.blit(cursor_surf, (virtual_mx - (frame_rect.width / 2), virtual_my - (frame_rect.height / 2)))
 
-
+         # Cinematic Effect (Iris Wipe)
+        if hasattr(self, 'transition_alpha') and self.transition_alpha > 0:
+            fade_surface = pygame.Surface((settings.VIRTUAL_WIDTH, settings.VIRTUAL_HEIGHT))
+            fade_surface.fill((0, 0, 0))
+            # Clamp alpha to max 255 to prevent Pygame crash during tweens
+            fade_surface.set_alpha(max(0, min(255, int(self.transition_alpha))))
+            surface.blit(fade_surface, (0, 0))
         
     def on_input(self, input_id: str, input_data: InputData) -> None:
 

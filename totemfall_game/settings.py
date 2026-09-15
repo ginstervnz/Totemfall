@@ -8,7 +8,7 @@ You can also add settings of your own here (for instance PLAYER_SPEED)
 and read them back the same way, with `from gale.conf import settings`.
 """
 import pathlib
-
+from pathlib import Path
 import pygame
 
 from gale import frames
@@ -216,11 +216,56 @@ FRAMES = {
     'xp_orb_frames': frames.generate_frames(TEXTURES['xp_orb'], 6, 6),
 }
 
+#AudioManager
+class AudioManager:
+    def __init__(self):
+        self.sounds = {}
+        self.sfx_volume = 1.0
+        self.music_volume = 0.5
+        
+    def load_sounds(self, sounds_dict: dict) -> None:
+        """Registers the dictionary of Pygame Sound objects."""
+        self.sounds = sounds_dict
+        self.set_sfx_volume(self.sfx_volume)
+
+    def play_sfx(self, name: str) -> None:
+        """Plays a loaded sound effect if it exists in the registry."""
+        if name in self.sounds:
+            self.sounds[name].play()
+            
+    def set_sfx_volume(self, volume: float) -> None:
+        """Updates the volume (0.0 to 1.0) for all sound effects in memory."""
+        self.sfx_volume = max(0.0, min(1.0, volume))
+        for sound in self.sounds.values():
+            sound.set_volume(self.sfx_volume)
+            
+    def play_music(self, filepath: str, loops: int = -1) -> None:
+        """Streams background music to save RAM, unlike SFX which are pre-loaded."""
+        try:
+            pygame.mixer.music.load(filepath)
+            pygame.mixer.music.set_volume(self.music_volume)
+            pygame.mixer.music.play(loops)
+        except pygame.error as e:
+            print(f"Could not load music track: {e}")
+            
+    def set_music_volume(self, volume: float) -> None:
+        """Updates the background music stream volume."""
+        self.music_volume = max(0.0, min(1.0, volume))
+        pygame.mixer.music.set_volume(self.music_volume)
+
+AUDIO_MANAGER = AudioManager()
+
 # Register your sound from the sounds folder, for instance:
 # SOUNDS = {
 #     'my_sound': pygame.mixer.Sound(BASE_DIR / "assets"  / "sounds" / "my_sound.wav"),
 # }
-SOUNDS = {}
+SOUNDS = {
+    'confirm': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "select_sound.mp3"),
+
+
+}
+
+AUDIO_MANAGER.load_sounds(SOUNDS)
 
 # Register your fonts from the fonts folder, for instance:
 # FONTS = {

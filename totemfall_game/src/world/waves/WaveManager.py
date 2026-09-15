@@ -70,9 +70,9 @@ class WaveManager:
         self.spawn_timer -= dt
         
         if self.spawn_timer <= 0 and self.enemies_to_spawn > 0:
-            self.spawn_enemy()
-            self.enemies_to_spawn -= 1
-            self.spawn_timer = self.spawn_interval
+            if self.spawn_enemy(): 
+                self.enemies_to_spawn -= 1
+                self.spawn_timer = self.spawn_interval
             
         # WAVE VICTORY CONDITION: Check if wave is completely cleared
         if self.enemies_to_spawn <= 0 and len(self.enemy_list) == 0:
@@ -83,62 +83,70 @@ class WaveManager:
                 # The entire level is completely cleared
                 self.is_active = False
             
-    def spawn_enemy(self) -> None:
-        """Creates an enemy at a random safe location inside the arena boundaries."""
+    def spawn_enemy(self) -> bool:
+        """Creates an enemy at a valid, walkable tile checking its full hitbox."""
         
         if not hasattr(self.current_room, 'allowed_enemies') or not self.current_room.allowed_enemies:
-            return # Safety check if the room doesn't have enemies configured
+            return False 
             
         enemy_class = random.choice(self.current_room.allowed_enemies)
         
-        # Instantiate the enemy temporarily at (0,0) to get its width and height
-        # SAFEGUARD: Try to inject hp_multiplier, fallback if teammate hasn't updated BaseEnemy yet
         try:
             new_enemy = enemy_class(0, 0, hp_multiplier=self.hp_multiplier)
         except TypeError:
             new_enemy = enemy_class(0, 0)
         
-        # Get all the solid blocks from the room to check for collisions
-        solid_rects = self.current_room.get_solid_rects()
-        
-        valid_spawn = False
-        max_attempts = 50 # Prevent infinite loops if the map is completely full
-
-        # Use the feet hitbox for the spawn test.
-        sprite_w = new_enemy.width if hasattr(new_enemy, 'width') and new_enemy.width > 0 else 16
-        sprite_h = new_enemy.height if hasattr(new_enemy, 'height') and new_enemy.height > 0 else 16
-        hitbox_w = 12
-        hitbox_h = 10
-        offset_x = (sprite_w - hitbox_w) / 2
-        offset_y = sprite_h - hitbox_h
-        
-        # Try to find a random spot that doesn't collide with walls
-        for _ in range(max_attempts):
-            test_x = random.randint(32, settings.VIRTUAL_WIDTH - 32 - sprite_w)
-            test_y = random.randint(80, settings.VIRTUAL_HEIGHT - 32 - sprite_h)
+        # --- HYBRID FIX: LOGICAL GRID + FULL HITBOX COLLISION ---
+        if hasattr(self.current_room, 'grid'):
+            valid_tiles = []
+            solid_rects = self.current_room.get_solid_rects()
+            # Start from row 4 to avoid spawning in the topmost decorative area
+            for y in range(4, settings.MAP_HEIGHT):
+                for x in range(settings.MAP_WIDTH):
+                    if not self.current_room.grid[y][x]:
+                        valid_tiles.append((x, y))
+                        
+            # Shuffle the tiles to try random spots across the entire map
+            random.shuffle(valid_tiles)
             
-            # Create a virtual hitbox for testing
-            test_rect = pygame.Rect(test_x + offset_x, test_y + offset_y, hitbox_w, hitbox_h)
+            # Enemy dimensions
+            sprite_w = new_enemy.width if hasattr(new_enemy, 'width') and new_enemy.width > 0 else 16
+            sprite_h = new_enemy.height if hasattr(new_enemy, 'height') and new_enemy.height > 0 else 16
             
-            # collidelist returns -1 if the rect does NOT touch any solid block
-            if test_rect.collidelist(solid_rects) == -1:
-                spawn_x = test_x
-                spawn_y = test_y
-                valid_spawn = True
-                break
+            for tile_x, tile_y in valid_tiles:
+                px = settings.MAP_RENDER_OFFSET_X + tile_x * settings.TILE_SIZE
+                py = settings.MAP_RENDER_OFFSET_Y + tile_y * settings.TILE_SIZE_Y
                 
-        # If we found a valid spot, place the enemy and activate it
+                test_x = px + (settings.TILE_SIZE / 2) - (sprite_w / 2)
+                test_y = py + (settings.TILE_SIZE_Y / 2) - (sprite_h / 2)
+                
+                # --- FIX: FULL BODY HITBOX ---
+                # We use the full sprite_w and sprite_h to perfectly match the EnemyWalkState.
+                # This guarantees the head won't spawn inside a wall block.
+                test_rect = pygame.Rect(test_x, test_y, sprite_w, sprite_h)
+                
+                if test_rect.collidelist(solid_rects) == -1:
+                    spawn_x = test_x
+                    spawn_y = test_y
+                    valid_spawn = True
+                    break
+        else:
+            valid_spawn = False 
+
         if valid_spawn:
             new_enemy.x = spawn_x
-            new_enemy.y = spawn_y - 200 # Spawn high in the sky
+            new_enemy.y = spawn_y - 200 
             new_enemy.target = self.totem
             self.enemy_list.append(new_enemy)
             new_enemy.is_spawning = True
+            
             def on_drop_finish(entity=new_enemy):
                 entity.is_spawning = False
                 dust_x = entity.x + (entity.width / 2)
                 dust_y = entity.y + entity.height
                 self.particle_systems.append(DustEffect(dust_x, dust_y))
-            # JUICE: ENEMY SPAWN DROP 
+                
             Timer.tween(0.8, [(new_enemy, {"y": spawn_y})], ease_function_name="out_bounce", on_finish=on_drop_finish)
-        
+            return True 
+            
+        return False

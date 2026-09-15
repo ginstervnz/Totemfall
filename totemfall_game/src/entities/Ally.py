@@ -34,10 +34,11 @@ class Ally:
                     closest = enemy
         return closest
 
-    def update(self, dt: float, enemies: list, totem, allies: list) -> None:
+    def update(self, dt: float, enemies: list, totem, allies: list, solid_rects: list) -> None:
         if getattr(self.visuals, 'hp', 0) <= 0:
             self.is_dead = True
             return
+        self.visuals.solid_rects = solid_rects
 
         old_target = getattr(self.visuals, 'target', None)
         nearest = self._find_nearest_enemy(enemies)
@@ -46,19 +47,27 @@ class Ally:
             # --- COMBAT MODE ---
             self.visuals.target = nearest
             
-            # Unconditionally force 'walk' state if the target changes to prevent swinging at air
+            # Unconditionally force 'walk' state if the target changes
             if self.visuals.target != old_target:
                 if hasattr(self.visuals, 'state_machine'):
                     self.visuals.state_machine.change('walk')
                         
-            # Run their normal AI
+            # Run their normal AI (which now knows about solid_rects)
             self.visuals.update(dt)
+            
+            # MELEE RETALIATION 
+            # If the ally gets close enough to initiate an attack, provoke the enemy
+            attack_range = getattr(self.visuals, 'attack_range', 35)
+            dist = math.hypot(nearest.x - self.x, nearest.y - self.y)
+            
+            if dist <= attack_range + 5:
+                nearest.aggro_target = self
             
         else:
             # --- GUARDIAN MODE (Fixed Front Formation) ---
             self.visuals.target = None 
             
-            # FORCE the state machine and animation to 'walk' so they put their weapons away!
+            # FORCE the state machine and animation to 'walk' so they put their weapons away
             if old_target is not None: 
                 if hasattr(self.visuals, 'state_machine'):
                     self.visuals.state_machine.change('walk')
@@ -82,11 +91,24 @@ class Ally:
             
             dist = math.hypot(target_x - self.x, target_y - self.y)
             
-            # Move towards assigned formation slot
+            # Move towards assigned formation slot with physical collisions
             if dist > 3:
                 move_angle = math.atan2(target_y - self.y, target_x - self.x)
-                self.visuals.x += math.cos(move_angle) * self.visuals.speed * dt
-                self.visuals.y += math.sin(move_angle) * self.visuals.speed * dt
+                
+                # Apply X movement and check collision
+                dx = math.cos(move_angle) * self.visuals.speed * dt
+                self.visuals.x += dx
+                rect = pygame.Rect(self.visuals.x, self.visuals.y, self.visuals.width, self.visuals.height)
+                if rect.collidelist(solid_rects) != -1:
+                    self.visuals.x -= dx # Revert X if hitting a wall
+                    
+                # Apply Y movement and check collision
+                dy = math.sin(move_angle) * self.visuals.speed * dt
+                self.visuals.y += dy
+                rect = pygame.Rect(self.visuals.x, self.visuals.y, self.visuals.width, self.visuals.height)
+                if rect.collidelist(solid_rects) != -1:
+                    self.visuals.y -= dy # Revert Y if hitting a wall
+
                 self.visuals.facing_right = math.cos(move_angle) > 0
                 
                 # Manually ensure the walk animation plays while moving to formation
@@ -104,7 +126,6 @@ class Ally:
                     self.visuals.current_animation = self.visuals.animations['walk']
                     self.visuals.current_animation.timer = 0
                     self.visuals.current_animation.current_frame = 0
-
 
     def take_damage(self, amount: int) -> None:
         """Proxies the damage to the underlying visual template."""
