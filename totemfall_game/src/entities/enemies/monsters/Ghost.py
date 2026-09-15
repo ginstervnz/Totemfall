@@ -11,6 +11,8 @@ class Ghost(BaseEnemy):
         self.width = 17
         self.height = 26
 
+        self.texture_id = 'ghost'
+
         # --- ENEMY SPECIFIC MELEE CONFIG ---
         self.attack_texture = 'attack_swing'
         self.attack_frames = [0, 1, 2, 3] 

@@ -10,6 +10,8 @@ class Lizard_3(BaseEnemy):
         self.width = 29 
         self.height = 22
         self.attack_range = 150
+
+        self.texture_id = 'lizard_3'
         
         self.projectile_config = {
             'speed': 90,

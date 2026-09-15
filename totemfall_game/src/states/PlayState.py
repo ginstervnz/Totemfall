@@ -1,6 +1,7 @@
 import pygame
 from gale.state import BaseState
 from gale.particle_system import ParticleSystem
+from gale.timer import Timer
 from gale.input_handler import InputData
 from src.entities.player.Player import Player
 from src.entities.Projectile import Projectile
@@ -11,6 +12,7 @@ from src.world.InfernoRoom import InfernoRoom
 from src.world.CatacombsRoom import CatacombsRoom
 from src.world.RockRoom import RockRoom
 from src.world.WaterRoom import WaterRoom
+from src.world.Pathfinder import Pathfinder
 
 import settings
 
@@ -44,6 +46,7 @@ class PlayState(BaseState):
         wizard_x = settings.VIRTUAL_WIDTH // 2
         wizard_y = self.platform_y + 11
         self.player = Player(wizard_x, wizard_y)
+        self.kill_counts = {}
 
         # Cursor
         pygame.mouse.set_visible(False)
@@ -62,13 +65,13 @@ class PlayState(BaseState):
         self.enemies = []
         # Initialize the manager
         self.wave_manager = WaveManager(self.enemies, self.totem, self.current_room)
-        self.wave_manager.start_wave(self.current_level)
+        self.wave_manager.start_level_sequence(self.current_level)
 
         # Don't erase
         self.particle_systems = []
-        self.player_damage = 5
-        self.level_cooldown = 0
-
+        self.player_damage = 200
+        self.level_cooldown = 1.0
+        self.transition_radius = 350.0
         
 
     def load_world(self) -> None:
@@ -87,17 +90,46 @@ class PlayState(BaseState):
         # Update the internal density and regenerate
         self._update_room_density()
 
+        # Instantiate the Pathfinder with the newly created room.
+        self.pathfinder = Pathfinder(self.current_room)
+
     def advance_level(self) -> None:
         """Increases the global level and regenerates the map or switches worlds."""
         self.current_level += 1
-        # Start the next wave of enemies
-        self.wave_manager.start_wave(self.current_level)
+        self.totem.hp = self.totem.max_hp
+
+
+        # Landing drop effect in the new level
+        target_totem_y = self.platform_y - 24 
+        target_wizard_y = self.platform_y + 11
+
+        # We "teleport" them to the top of the screen instantly.
+        self.totem.y = -150
+        self.player.y = -150
+
+        self.transition_radius = 0.0
+
+        # And we lower them gently onto their platform in one second.
+        Timer.tween(1.0, [
+            (self.totem, {'y': target_totem_y}),
+            (self.player, {'y': target_wizard_y})
+        ])
+
+        Timer.tween(1.5, [
+            (self, {'transition_radius': 350.0})
+        ])
+
         # If we hit level 9 or 17, swap the entire world class
         if (self.current_level - 1) % 8 == 0:
             self.load_world()
         else:
             # Otherwise, just make the current world harder and rebuild the blocks
-            self._update_room_density()
+            self._update_room_density()        
+
+        self.wave_manager.current_room = self.current_room
+        # Start the next wave of enemies
+        self.wave_manager.start_level_sequence(self.current_level)
+        
 
     def _update_room_density(self) -> None:
         """Calculates the internal 1-8 difficulty and forces a map redraw."""
@@ -107,14 +139,50 @@ class PlayState(BaseState):
 
 
     def update(self, dt: float) -> None:
+        Timer.update(dt)
         self.totem.update(dt)
+        self.player.can_shoot = (len(self.enemies) > 0 and not getattr(self, 'is_transitioning', False)) # We send the Wizard a signal indicating whether or not he can shoot.
         self.player.update(dt)
         self.current_room.update(dt)
-
+        
         #Gameover
-        if self.totem.hp <= 0:
-            pygame.mouse.set_visible(True)
-            self.state_machine.change('game_over')
+        # Game Over Cinematic Sequence
+        if self.totem.hp <= 0 and not getattr(self, 'is_game_over', False):
+            self.is_game_over = True
+            self.game_over_timer = 2.5
+            
+            # We clean up the chaos (We disintegrate the missiles)
+            for p in self.enemy_projectiles: p.active = False
+            for p in self.projectiles: p.active = False
+            
+            # Massive particle explosion at the Totem
+            for _ in range(6): 
+                self.particle_systems.append(BloodEffect(self.totem.x + 10, self.totem.y + 20))
+                
+            # Destruction Animation: The Totem sinks into the ground over 1.5s.
+            Timer.tween(1.5, [
+                (self.totem, {'y': self.totem.y + 100})
+            ])
+            
+            # Fade Out
+            Timer.tween(2.0, [
+                (self, {'transition_radius': 0.0})
+            ])
+
+        # TIME FREEZE
+        if getattr(self, 'is_game_over', False):
+            self.game_over_timer -= dt
+            
+            # We only allow the particles to update for the visual effect.
+            for i in range(len(self.particle_systems) - 1, -1, -1):
+                self.particle_systems[i].update(dt)
+                if not self.particle_systems[i].active:
+                    self.particle_systems.pop(i)
+                    
+            # When the timer finishes, we perform the state change.
+            if self.game_over_timer <= 0:
+                pygame.mouse.set_visible(True)
+                self.state_machine.change('game_over', kill_counts=self.kill_counts)
             return
 
         #Hit
@@ -131,22 +199,30 @@ class PlayState(BaseState):
             if not self.particle_systems[i].active:
                 self.particle_systems.pop(i)
 
-        #Cursor and shot
-        if self.player.just_fired:
-            self.cursor_frame = 4 #Normal shot
-            #Shot
-            for p in self.projectiles:
-                if not p.active:
-                    p.fire(self.player.shoot_x, self.player.shoot_y, self.player.shoot_angle, self.player.shoot_target_dist, self.player.projectile_config)
-                    break
-        else:
-            if self.player.is_exhausted:
-                self.cursor_frame = 6 # NO MANA
-            elif self.player.mana <= self.player.mana_cost * 4:
-                self.cursor_frame = 5 # Gray
+
+        # We only allow firing if we are NOT in a cinematic.
+        if not getattr(self, 'is_transitioning', False):
+            if len(self.enemies) > 0:
+                #Cursor and shot
+                if self.player.just_fired:
+                    self.cursor_frame = 4 #Normal shot
+                    
+                    #Shot
+                    for p in self.projectiles:
+                        if not p.active:
+                            p.fire(self.player.shoot_x, self.player.shoot_y, self.player.shoot_angle, self.player.shoot_target_dist, self.player.projectile_config)
+                            break
+                else:
+                    if self.player.is_exhausted:
+                        self.cursor_frame = 6 # NO MANA
+                    elif self.player.mana <= self.player.mana_cost * 4:
+                        self.cursor_frame = 5 # Gray
+                    else:
+                        self.cursor_frame = 3 # Blue
             else:
+                self.player.just_fired = False
                 self.cursor_frame = 3 # Blue
-        
+            
         #Block logic
         solid_rects = self.current_room.get_solid_rects()
 
@@ -165,10 +241,23 @@ class PlayState(BaseState):
             enemy = self.enemies[i]
             
             if enemy.is_dead:
+                tex_id = getattr(enemy, 'texture_id', 'goblin')
+                self.kill_counts[tex_id] = self.kill_counts.get(tex_id, 0) + 1
                 self.enemies.pop(i)
                 continue
-            enemy.solid_rects = solid_rects 
+            enemy.solid_rects = solid_rects
+            enemy.pathfinder = self.pathfinder
             enemy.update(dt)
+
+            if getattr(enemy, 'block_to_break', None) is not None:
+                col, row = enemy.block_to_break
+                self.current_room.break_block_at(col, row)
+                enemy.block_to_break = None # Clean up the signal
+
+                # Calculate block position to generate dust/debris
+                px = settings.MAP_RENDER_OFFSET_X + col * settings.TILE_SIZE + (settings.TILE_SIZE // 2)
+                py = settings.MAP_RENDER_OFFSET_Y + row * settings.TILE_SIZE_Y + (settings.TILE_SIZE_Y // 2)
+                self.particle_systems.append(BloodEffect(px, py))
             
             enemy_rect = pygame.Rect(enemy.x, enemy.y, enemy.width, enemy.height)
             
@@ -208,7 +297,34 @@ class PlayState(BaseState):
                         self.totem.take_damage(1)
                     elif p.get_collision_rect().collidelist(solid_rects) != -1:
                         p.explode(texture_id='sparkle', frames=[0, 1, 2, 3])
-                
+
+        if not self.wave_manager.is_active and len(self.enemies) == 0:
+
+            # We detect the moment they win in order to trigger the cinematic sequence.
+            if not getattr(self, 'is_transitioning', False):
+                self.is_transitioning = True
+                self.level_cooldown = 2.5
+
+                # Clear projectiles IMMEDIATELY upon winning
+                for p in self.enemy_projectiles:
+                    p.active = False
+                for p in self.projectiles:
+                    p.active = False
+
+                # Liftoff: We move both objects off-screen (Y = -100) over 1.5 seconds.
+                Timer.tween(2.0, [
+                    (self.totem, {'y': -100}),
+                    (self.player, {'y': -100})
+                ])
+                Timer.tween(2.5, [
+                    (self, {'transition_radius': 0.0})
+                ])
+
+            # Once the cooldown ends and the characters are no longer visible, we switch maps.
+            if self.level_cooldown <= 0:
+                self.advance_level()
+                print(f"¡Nivel completado! Avanzando al nivel: {self.current_level}")
+                self.is_transitioning = False
 
     def render(self, surface: pygame.Surface) -> None:
         surface.fill((30, 25, 45)) 
@@ -272,6 +388,42 @@ class PlayState(BaseState):
             else:
                 surface.blit(empty_heart, (hx, hy))
 
+        font = settings.FONTS['small']
+
+        # Render the text into a surface (Text, Antialiasing, Color RGB)
+        level_text = font.render(f"Level: {self.current_level}", True, (255, 255, 255))
+        
+        # Position X aligns with the first heart, Position Y goes below the hearts + 8 pixels of padding
+        text_x = 10
+        text_y = 10 + new_height + 8 
+        surface.blit(level_text, (text_x, text_y))
+
+
+
+        # --- MODO DEBUG: Dibujar los rectángulos de colisión en rojo ---
+        for rect in self.current_room.get_solid_rects():
+            pygame.draw.rect(surface, (255, 0, 0), rect, 1)
+
+
+
+        # Cinematic Effect (Iris Wipe)
+        if hasattr(self, 'transition_radius') and self.transition_radius < 350:
+            # We created a completely black "curtain" the size of the screen.
+            iris_surface = pygame.Surface((settings.VIRTUAL_WIDTH, settings.VIRTUAL_HEIGHT))
+            iris_surface.fill((0, 0, 0))
+            
+            center_x = settings.VIRTUAL_WIDTH // 2
+            center_y = settings.VIRTUAL_HEIGHT // 2
+            
+            # We avoid mathematical errors if the radius becomes negative due to decimal values
+            safe_radius = max(0, int(self.transition_radius))
+            
+            # We draw a magenta circle (or any bright color).
+            COLOR_KEY = (255, 0, 255)
+            pygame.draw.circle(iris_surface, COLOR_KEY, (center_x, center_y), safe_radius)
+            iris_surface.set_colorkey(COLOR_KEY)
+            
+            surface.blit(iris_surface, (0, 0))
 
         #Cursor
         mx, my = pygame.mouse.get_pos()

@@ -10,6 +10,8 @@ class Ghost_2(BaseEnemy):
         self.width = 29 
         self.height = 22
         self.attack_range = 150
+
+        self.texture_id = 'ghost_2'
         
         self.projectile_config = {
             'speed': 90,

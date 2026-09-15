@@ -11,6 +11,8 @@ class Minotaur_2(BaseEnemy):
         self.width = 30
         self.height = 20
 
+        self.texture_id = 'minotaur_2'
+
         # --- ENEMY SPECIFIC MELEE CONFIG ---
         self.attack_texture = 'attack_swing'
         self.attack_frames = [0, 1, 2, 3] 

@@ -48,3 +48,22 @@ Todas las adiciones, cambios y correcciones de este proyecto serán documentadas
 - **Arquitectura Procedural para la generacion de enemigos:** Cracion de la clase `WaveManager.py` que gestiona la generacion de los enemigos en el nivel.
 - **Algoritmos de Mapas con enemigos:** Implementación de tipos especificos de enemigos por tipo de mundo.
 - **Agregado de los tipos de enmigos:** Implementacion de los diferentes mounstros que va a tener el juego.
+
+
+## [v0.4.0] - Cinemáticas, Físicas Avanzadas y Estadísticas (Kill Tracker)
+
+### Añadido
+- **Cinemáticas de Nivel:** Implementación de secuencias de victoria (ascenso al cielo) y entrada triunfal (aterrizaje al nuevo nivel) utilizando el motor de interpolación matemática (`Timer.tween`).
+- **Efecto de Transición (Iris Wipe):** Sistema visual de cierre y apertura circular entre escenas construido con el lienzo de Pygame utilizando enmascaramiento por color clave (`set_colorkey`).
+- **Cinemática de Derrota (Time Freeze):** Implementación del patrón de "Congelamiento de Tiempo" que detiene la lógica del motor para ejecutar una explosión de partículas y el hundimiento del Tótem antes del cambio de estado.
+- **Sistema de Estadísticas (Kill Tracker):** Recolección dinámica de bajas en un diccionario (`kill_counts`) que identifica el tipo de monstruo derrotado mediante su atributo `texture_id`.
+- **UI en Cuadrícula Dinámica (Grid Layout):** Rediseño matemático del `GameOverState` para organizar el reporte de bajas en una cuadrícula auto-centrada de hasta 7 columnas, capaz de escalar y mostrar múltiples sprites y multiplicadores de texto ("x N") sin solapamientos.
+
+### Cambiado
+- **Sistema de Seguro de Arma (Weapon Safety):** Implementación de una bandera de comunicación (`can_shoot`) entre el `PlayState` y el `Player` para suspender el gasto de maná, bloqueando los disparos durante las cinemáticas o en ausencia de enemigos.
+- **Renderizado y Vida de Partículas:** 
+
+### Corregido
+- **Deslizamiento de Muros (Wall Sliding):** Se rediseñó el motor físico `_move_with_collisions` en `BaseEnemy` aplicando Conservación de Inercia. Los enemigos ahora transfieren el 100% de su aceleración al eje libre, erradicando la pérdida artificial de velocidad (fricción de pared).
+- **Vibración de Enemigos (Target Jittering):** Se incorporó un "Radio de Ataque" (Stopping Distance de 15 píxeles) en el algoritmo de supervivencia (Plan B). Los monstruos cuerpo a cuerpo ahora frenan en seco al rodear el Tótem, eliminando el temblor de colisión AABB.
+- **Limpieza Instantánea de Proyectiles:** Se solucionó el problema de *fuego fantasma* desintegrando forzosamente cualquier misil vivo en pantalla en el milisegundo exacto en que inicia una cinemática.

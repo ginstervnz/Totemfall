@@ -11,6 +11,8 @@ class Skeleton(BaseEnemy):
         self.width = 19
         self.height = 20
 
+        self.texture_id = 'skeleton'
+
         # --- ENEMY SPECIFIC MELEE CONFIG ---
         self.attack_texture = 'attack_swing'
         self.attack_frames = [0, 1, 2, 3] 

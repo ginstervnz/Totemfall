@@ -5,12 +5,13 @@ from gale.state import StateMachine
 from gale.animation import Animation
 
 class Arc_Orc(BaseEnemy):
-    def __init__(self, x: float, y: float):
+    def __init__(self, x: float, y: float, **kwargs):
         
         super().__init__(x, y, hp=10, speed=25) 
         self.width = 16 
         self.height = 16
 
+        self.texture_id = 'goblin'
         self.attack_range = 120
         self.projectile_config = {'speed': 120, 'texture': 'arrow', 'frames': [0,1,2,3,4,5]}
         self.animations = {

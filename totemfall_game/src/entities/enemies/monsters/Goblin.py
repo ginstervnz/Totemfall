@@ -9,6 +9,8 @@ class Goblin(BaseEnemy):
         super().__init__(x, y, hp=15, speed=25) 
         self.width = 23 
         self.height = 23
+
+        self.texture_id = 'goblin2'
         
         # --- ENEMY SPECIFIC MELEE CONFIG ---
         self.attack_texture = 'attack_spear'

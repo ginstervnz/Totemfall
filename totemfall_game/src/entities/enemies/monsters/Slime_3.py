@@ -11,6 +11,8 @@ class Slime_3(BaseEnemy):
         self.width = 28
         self.height = 20
 
+        self.texture_id = 'slime_3'
+
         # --- ENEMY SPECIFIC MELEE CONFIG ---
         self.attack_texture = 'attack_swing'
         self.attack_frames = [0, 1, 2, 3] 

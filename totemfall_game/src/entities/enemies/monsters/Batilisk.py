@@ -11,6 +11,8 @@ class Batilisk(BaseEnemy):
         self.width = 20
         self.height = 18
 
+        self.texture_id = 'batilisk'
+
         # --- ENEMY SPECIFIC MELEE CONFIG ---
         self.attack_texture = 'attack_swing'
         self.attack_frames = [0, 1, 2, 3] 

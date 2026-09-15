@@ -34,6 +34,8 @@ class Player:
             'frames': [0, 1, 2, 3]
         }
 
+        self.can_shoot = True
+
         #Heal
         self.max_hp = 5
         self.hp = self.max_hp
@@ -85,8 +87,8 @@ class Player:
         # Shoot
         self.just_fired = False
         self.shoot_timer -= dt
-        if self.shoot_timer <= 0 and not self.is_exhausted:
-            self.shoot_timer = self.fire_rate 
+        if self.shoot_timer <= 0 and not self.is_exhausted and self.can_shoot:
+            self.shoot_timer = self.fire_rate
             self.just_fired = True
             self.mana -= self.mana_cost
 
