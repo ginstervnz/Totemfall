@@ -3,6 +3,7 @@ from gale.state import BaseState
 from gale.input_handler import InputData
 from gale.timer import Timer
 import settings
+import random
 
 class NameInputState(BaseState):
     def enter(self) -> None:
@@ -78,7 +79,10 @@ class NameInputState(BaseState):
                 self.is_transitioning = True
                     
                 # We transform the list of ASCII codes into a string.
-                final_name = "".join([chr(c) for c in self.chars])
+                base_name = "".join([chr(c) for c in self.chars])
+
+                pin = random.randint(1000, 9999)
+                final_name = f"{base_name}-{pin}"
 
                 try:
                     print(f"[*] Intentando guardar el nombre: {final_name}...")
