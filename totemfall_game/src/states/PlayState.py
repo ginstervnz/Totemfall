@@ -87,7 +87,7 @@ class LightningEffect:
             pygame.draw.lines(surface, (255, 255, 255), False, self.points, 1)
 
 class PlayState(BaseState):
-    def enter(self, random_mode=False, previous_score=0, previous_kills=None, **kwargs) -> None:
+    def enter(self, random_mode=False, previous_score=0, previous_kills=None, saved_player=None, **kwargs) -> None:
         self.platform_y = 22 
         self.random_mode = random_mode
         
@@ -100,7 +100,16 @@ class PlayState(BaseState):
         
         # START HIGH UP IN THE SKY 
         self.totem = Totem(totem_x, -150)
-        self.player = Player(wizard_x, -150)
+
+        if saved_player is not None:
+            # If we're coming from Story Mode, we use the super-powerful wizard.
+            self.player = saved_player
+            # We teleport him to the sky for the falling animation.
+            self.player.x = wizard_x
+            self.player.y = -150
+        else:
+            # Si venimos del menú principal, creamos un mago nivel 1
+            self.player = Player(wizard_x, -150)
         
         # NEW INITIAL FADE-IN & DROP EFFECT 
         self.transition_alpha = 255.0
@@ -642,7 +651,7 @@ class PlayState(BaseState):
             if self.level_cooldown <= 0:
                 if self.current_level > 39:
                     pygame.mouse.set_visible(True)
-                    self.state_machine.change('victory', kill_counts=self.kill_counts, final_score=self.score)
+                    self.state_machine.change('victory', kill_counts=self.kill_counts, final_score=self.score, saved_player=self.player)
 
                 else:
                     self.advance_level()

@@ -9,10 +9,11 @@ import settings
 from src.entities.FireworkEffect import FireworkEffect
 
 class VictoryState(BaseState):
-    def enter(self, kill_counts=None,final_score=0, **kwargs) -> None:
+    def enter(self, kill_counts=None,final_score=0, saved_player=None, **kwargs) -> None:
         pygame.mouse.set_visible(True)
         self.kill_counts = kill_counts or {}
         self.final_score = final_score
+        self.saved_player = saved_player
         self.is_transitioning = False
 
         # HORIZONTAL SUBMENU VARIABLES
@@ -208,7 +209,7 @@ class VictoryState(BaseState):
                 if selected_option == 'Keep Playing':
                     # We send the signal randomly here.
                     Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], 
-                                on_finish=lambda: self.state_machine.change('play', random_mode=True, previous_score=self.final_score, previous_kills=self.kill_counts))
+                                on_finish=lambda: self.state_machine.change('play', random_mode=True, previous_score=self.final_score, previous_kills=self.kill_counts, saved_player=self.saved_player))
                                 
                 elif selected_option == 'Main Menu':
                     Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], 
