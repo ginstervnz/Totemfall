@@ -7,7 +7,7 @@ from gale.animation import Animation
 class Arc_Orc(BaseEnemy):
     def __init__(self, x: float, y: float, **kwargs):
         
-        super().__init__(x, y, hp=10, speed=25) 
+        super().__init__(x, y, hp=10, speed=20) 
         self.width = 16 
         self.height = 16
 

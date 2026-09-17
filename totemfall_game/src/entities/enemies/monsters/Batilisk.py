@@ -7,7 +7,7 @@ from gale.animation import Animation
 class Batilisk(BaseEnemy):
     def __init__(self, x: float, y: float):
         # Firts dates for enemies
-        super().__init__(x, y, hp=20, speed=30)
+        super().__init__(x, y, hp=15, speed=25)
         self.width = 20
         self.height = 18
 

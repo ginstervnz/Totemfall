@@ -32,6 +32,6 @@ class MainMenuState(BaseState):
                 settings.AUDIO_MANAGER.play_sfx('confirm')
                 self.is_transitioning = True
                 # Fade to black over 1 second, then change state
-                Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('play'))
+                Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('intro'))
             elif input_id == 'options':
                 self.state_machine.change('options')

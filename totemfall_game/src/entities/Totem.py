@@ -1,4 +1,5 @@
 import pygame
+import random
 import settings
 from gale.animation import Animation
 
@@ -15,6 +16,9 @@ class Totem:
         self.hp = self.max_hp
         self.hit_flash_timer = 0
 
+        # CINEMATIC SHAKE TIMER
+        self.shake_timer = 0.0
+
     def take_damage(self, amount: int) -> None:
         self.hp = max(0, self.hp - amount)
         self.hit_flash_timer = 0.15
@@ -22,9 +26,13 @@ class Totem:
     def update(self, dt: float) -> None:
         self.animation.update(dt)
 
-        #Heal
+        # Heal
         if self.hit_flash_timer > 0:
             self.hit_flash_timer -= dt
+
+        # UPDATE SHAKE 
+        if self.shake_timer > 0:
+            self.shake_timer -= dt
 
     def render(self, surface: pygame.Surface) -> None:
         image = settings.TEXTURES['obelisk']
@@ -35,5 +43,13 @@ class Totem:
                 
         if self.hit_flash_timer > 0:
             entity_surface.fill((255, 255, 255), special_flags=pygame.BLEND_RGB_ADD)
+
+        # APPLY SHAKE OFFSET ON RENDER 
+        render_x = self.x
+        render_y = self.y
+        if self.shake_timer > 0:
+            render_x += random.randint(-10, 10)
+            render_y += random.randint(-10, 10)
+
                     
         surface.blit(entity_surface, (self.x, self.y))

@@ -7,7 +7,7 @@ from gale.animation import Animation
 class Slime_3(BaseEnemy):
     def __init__(self, x: float, y: float):
         # Firts dates for enemies
-        super().__init__(x, y, hp=20, speed=30)
+        super().__init__(x, y, hp=30, speed=30)
         self.width = 28
         self.height = 20
 

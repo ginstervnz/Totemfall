@@ -69,7 +69,7 @@ Todas las adiciones, cambios y correcciones de este proyecto serán documentadas
 - **Limpieza Instantánea de Proyectiles:** Se solucionó el problema de *fuego fantasma* desintegrando forzosamente cualquier misil vivo en pantalla en el milisegundo exacto en que inicia una cinemática.
 - **Agregado tipos de cartas:** Implementacion de los diferentes tipos de cartas que daran poderes al jugador.
 
-## [v0.4.0] - Sistema de Invocación, UI "Juice" y Efectos Visuales
+## Sistema de Invocación, UI "Juice" y Efectos Visuales
 
 ### Añadido
 - **Efectos de Interfaz (Juice) para Cartas:** Implementación de animaciones de entrada (`tweening`), escalado dinámico al pasar el cursor con marco dorado, partículas mágicas integradas y auto-ajuste inteligente de texto.
@@ -80,3 +80,16 @@ Todas las adiciones, cambios y correcciones de este proyecto serán documentadas
 - **Formaciones Defensivas Tácticas:** Los monstruos aliados transicionan a un "Modo Guardián", marchando hacia posiciones de escolta predefinidas frente al obelisco cuando se limpia la oleada.
 - **Sistema de Aggro Dinámico e Intercepción:** Los enemigos evalúan la distancia en tiempo real para priorizar el combate contra los aliados más cercanos en lugar del obelisco. Los proyectiles enemigos ahora también impactan y dañan a las invocaciones.
 - **Animaciones de Aparición (Spawn Drop):** Tanto enemigos como aliados ingresan al campo de batalla cayendo desde el cielo con un efecto de rebote, detonando un nuevo sistema de partículas de impacto (`DustEffect.py`) al tocar el suelo.
+
+## [v0.5.0] - Cinemáticas Avanzadas, Entornos Dinámicos y Pulido Sonoro
+
+### Añadido
+- **Cinemática de Introducción (`IntroCinematicState`):** Creación de un estado completamente nuevo orquestado con `gale.timer` y animaciones de `gale.animation`. Presenta una turba masiva de monstruos escalados y descentralizados persiguiendo al jugador, con partículas de polvo dinámicas y una transición por corte al juego.
+- **Muros Masivos Invisibles (World Bounds):** Inyección procedural de cuatro bloques colosales e invisibles (500px de grosor) alrededor de la cuadrícula de juego. Previene de forma definitiva el *softlock* de entidades generadas o empujadas fuera del área de renderizado por el motor de colisiones.
+- **Sistema Híbrido de Generación Segura (Spawn Safety):** El algoritmo `WaveManager` ahora combina restricciones lógicas de la matriz con colisiones físicas AABB completas, asegurando que enemigos voluminosos no solapen su hitbox con las texturas de la pared.
+- **Mecánica de Demolición (Destrucción de Bloques):** Implementación de la carta `BlocksCard` y retroalimentación acústica. El jugador ahora puede disparar y destruir dinámicamente muros generados proceduralmente (respetando los bordes perimetrales), alterando las rutas de la IA en tiempo real.
+- **Orquestación de Audio Fluida:** Ajustes en el `settings.AUDIO_MANAGER` para detener y hacer fundidos cruzados (fade out) asíncronos tanto del nuevo efecto sonoro de persecución (`chase.ogg`) como del derrumbe del obelisco (`totemfall.ogg`) en sus respectivos cambios de estado.
+
+### Cambiado
+- **Ampliación del Límite Letal (Insta-Kill Failsafe):** Se ajustó matemáticamente el margen de tolerancia del *failsafe* (+32px), evitando la eliminación accidental de los modelos de monstruos más grandes mientras intentan rodear los límites del mapa.
+- **Progresión Dinámica de Estadísticas:** Integración total de la función `scale_stats` dentro de la rutina de nacimiento de la horda en `WaveManager`, escalando la salud y velocidad de cada unidad en tiempo real según el nivel global.

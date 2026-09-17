@@ -12,6 +12,7 @@ from src.entities.cards.XPBoost import XPBoost
 from src.entities.cards.SummonUnlockCard import SummonUnlockCard
 from src.entities.cards.SummonSlotCard import SummonSlotCard
 from src.entities.cards.AllyDamageCard import AllyDamageCard
+from src.entities.cards.BlocksCard import BlocksCard
 # Import your other cards here as you create them
 
 
@@ -21,7 +22,7 @@ class CardManager:
         self.available_cards = [DamageCard,SpeedUpCard,AtkSpeedUP,
                                 ManaUP,ManaReduce,ShootSpeed,
                                 MoreMana,HealTotem,XPBoost,
-                                SummonUnlockCard
+                                SummonUnlockCard, BlocksCard,
                                 ] 
         # When you add more, just put them in the list:
         # self.available_cards = [DamageCard, ManaCard, SpeedCard]
@@ -37,6 +38,12 @@ class CardManager:
 
         if AllyDamageCard not in self.available_cards:
             self.available_cards.append(AllyDamageCard)
+
+    def remove_card(self, card_class) -> None:
+        """Removes a specific card class from the available pool."""
+        if card_class in self.available_cards:
+            self.available_cards.remove(card_class)
+
 
     def get_random_hand(self, amount: int = 3) -> list:
         """Picks random cards and positions them evenly on the screen."""

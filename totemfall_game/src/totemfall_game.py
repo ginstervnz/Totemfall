@@ -11,12 +11,14 @@ from src.states.MainMenuState import MainMenuState
 from src.states.PlayState import PlayState
 from src.states.OptionsState import OptionsState
 from src.states.GameOverState import GameOverState
+from src.states.IntroCinematicState import IntroCinematicState
 
 
 class TotemfallGame(Game, InputListener):
     def init(self) -> None:
         self.state_machine = StateMachine({
             'main_menu': lambda sm: MainMenuState(sm),
+            'intro': lambda sm: IntroCinematicState(sm),
             'play': lambda sm: PlayState(sm),
             'options': lambda sm: OptionsState(sm),
             'game_over': lambda sm: GameOverState(sm),

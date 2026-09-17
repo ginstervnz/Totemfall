@@ -10,6 +10,7 @@ and read them back the same way, with `from gale.conf import settings`.
 import pathlib
 from pathlib import Path
 import pygame
+from gale.timer import Timer
 
 from gale import frames
 from gale import input_handler
@@ -63,7 +64,14 @@ new_height = raw_obelisk.get_height() // scale_factor
 scaled_obelisk = pygame.transform.smoothscale(raw_obelisk, (new_width, new_height))
 #-------
 
+raw_dragon = pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprDragon.png")
+dragon_scale = 2
 
+new_dragon_w = raw_dragon.get_width() // dragon_scale
+new_dragon_h = raw_dragon.get_height() // dragon_scale
+scaled_dragon = pygame.transform.smoothscale(raw_dragon, (new_dragon_w, new_dragon_h))
+scaled_frame_w = 70 // dragon_scale 
+scaled_frame_h = 73 // dragon_scale 
 
 # Register your textures from the graphics folder, for instance:
 # TEXTURES = {
@@ -87,6 +95,7 @@ TEXTURES = {
     'magic_explosion': pygame.image.load(BASE_DIR / "assets" / "graphics" / "sprMagicExplosion.png"),
     'batilisk': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters"/ "sprBatilisk1.png"),
     'attack_swing': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack"/"sprAttackSwing.png"),
+    'dragon': scaled_dragon,
     'goblin': pygame.image.load(BASE_DIR / "assets" / "graphics" / "monsters" / "sprOrcArcher1.png"),
     'arrow': pygame.image.load(BASE_DIR / "assets" / "graphics" / "attack"/"sprArrow.png"),
     'brick': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "sprBrick.png"),
@@ -142,6 +151,7 @@ TEXTURES = {
     'icon_regeneration_mana': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "regeneration.png"),
     'icon_heal_totem': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "heal_totem.png"),
     'icon_XP_boost': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "exp_boost.png"),
+    'icon_blocks': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "blocks.png"),
     'xp_orb': pygame.image.load(BASE_DIR / "assets" / "graphics" / "exp_orb.png"),
     'obelisk': scaled_obelisk,
 }
@@ -168,6 +178,7 @@ FRAMES = {
     'props_catacombs': frames.generate_frames(TEXTURES['props_catacombs'], 16, 21),
     'props_corpses': frames.generate_frames(TEXTURES['props_corpses'], 8, 9),
     'rock': frames.generate_frames(TEXTURES['rock'], 20, 20),
+    'dragon_frames': frames.generate_frames(TEXTURES['dragon'], scaled_frame_w, scaled_frame_h),
     'water': frames.generate_frames(TEXTURES['water'], 20, 20),
     'heart_frames': frames.generate_frames(TEXTURES['heart'], 6, 4),
     'sparkle_frames': frames.generate_frames(TEXTURES['sparkle'], 7, 7),
@@ -213,15 +224,24 @@ FRAMES = {
     'icon_regeneration_mana_frames': frames.generate_frames(TEXTURES['icon_regeneration_mana'], 16,16 ),
     'icon_heal_totem_frames': frames.generate_frames(TEXTURES['icon_heal_totem'], 16,16 ),
     'icon_XP_boost_frames': frames.generate_frames(TEXTURES['icon_XP_boost'], 16,16 ),
+    'icon_blocks_frames': frames.generate_frames(TEXTURES['icon_blocks'], 16,16 ),
     'xp_orb_frames': frames.generate_frames(TEXTURES['xp_orb'], 6, 6),
 }
 
 #AudioManager
+
+pygame.mixer.quit()
+pygame.mixer.pre_init(44100, -16, 2, 512)
+pygame.mixer.init()
+pygame.mixer.set_num_channels(32)
+
+
 class AudioManager:
     def __init__(self):
         self.sounds = {}
         self.sfx_volume = 1.0
-        self.music_volume = 0.5
+        self.music_volume = 1.0
+        self.current_song = None
         
     def load_sounds(self, sounds_dict: dict) -> None:
         """Registers the dictionary of Pygame Sound objects."""
@@ -239,12 +259,16 @@ class AudioManager:
         for sound in self.sounds.values():
             sound.set_volume(self.sfx_volume)
             
-    def play_music(self, filepath: str, loops: int = -1) -> None:
-        """Streams background music to save RAM, unlike SFX which are pre-loaded."""
+    def play_music(self, filepath: str, loops: int = -1, fade_ms: int = 1500) -> None:
+        """Streams background music with a built-in Pygame fade-in effect."""
+        if self.current_song == filepath:
+            return 
+            
+        self.current_song = filepath
         try:
             pygame.mixer.music.load(filepath)
             pygame.mixer.music.set_volume(self.music_volume)
-            pygame.mixer.music.play(loops)
+            pygame.mixer.music.play(loops, fade_ms=fade_ms) 
         except pygame.error as e:
             print(f"Could not load music track: {e}")
             
@@ -252,6 +276,19 @@ class AudioManager:
         """Updates the background music stream volume."""
         self.music_volume = max(0.0, min(1.0, volume))
         pygame.mixer.music.set_volume(self.music_volume)
+
+    def fade_out_and_play(self, next_song_path: str, duration: float = 1.5) -> None:
+        """Fades out the current music and uses Gale's Timer to play the next one."""
+        if self.current_song == next_song_path:
+            return
+        fade_ms = int(duration * 1000)
+        pygame.mixer.music.fadeout(fade_ms)
+        Timer.after(duration, lambda: self.play_music(next_song_path, fade_ms=fade_ms))
+
+    def stop_music_fade(self, duration: float = 1.5) -> None:
+        """Silences the music entirely, typically used for Game Over screens."""
+        pygame.mixer.music.fadeout(int(duration * 1000))
+        self.current_song = None
 
 AUDIO_MANAGER = AudioManager()
 
@@ -261,11 +298,29 @@ AUDIO_MANAGER = AudioManager()
 # }
 SOUNDS = {
     'confirm': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "select_sound.mp3"),
-
-
+    'hit_enemy': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit_enemy.wav"),
+    'hit_totem': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit_totem.wav"),
+    'hit_wall': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit_wall.wav"),
+    'shoot_wizard': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "shoot_wizard.wav"),
+    'exp': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "exp_orb.wav"),
+    'spawn_card': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "spawn_card.mp3"),
+    'hover_efect': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hover_efect.wav"),
+    'melee': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "melee.wav"),
+    'shoot_enemy': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "shoot_enemy.wav"),
+    'spawn_ally': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "spawn_ally.wav"),
+    'dead_ally': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "dead_ally.wav"),
+    'dead_enemy': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "dead_enemy.wav"),
+    'chase': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "chase.mp3"),
+    'totemfall': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "totemfall.OGG"),
 }
 
 AUDIO_MANAGER.load_sounds(SOUNDS)
+AUDIO_MANAGER.sounds['shoot_wizard'].set_volume(0.2)
+AUDIO_MANAGER.sounds['melee'].set_volume(0.3)
+AUDIO_MANAGER.sounds['shoot_enemy'].set_volume(0.5)
+AUDIO_MANAGER.sounds['spawn_card'].set_volume(0.5)
+AUDIO_MANAGER.sounds['hit_totem'].set_volume(0.5)
+AUDIO_MANAGER.sounds['totemfall'].set_volume(0.5)
 
 # Register your fonts from the fonts folder, for instance:
 # FONTS = {

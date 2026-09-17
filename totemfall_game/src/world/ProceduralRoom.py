@@ -194,6 +194,24 @@ class ProceduralRoom:
                     rect_w = current_width * settings.TILE_SIZE
                     rect_h = current_height * settings.TILE_SIZE_Y
                     rects.append(pygame.Rect(pixel_x, pixel_y, rect_w, rect_h))
+
+        # MASSIVE INVISIBLE OUTER BOUNDARIES
+        # Create a 500-pixel thick invisible solid wall completely surrounding the map.
+        # This prevents large enemies from glitching out or spawning outside the bounds.
+        bound_thickness = 500
+        map_x = settings.MAP_RENDER_OFFSET_X
+        map_y = settings.MAP_RENDER_OFFSET_Y
+        map_w = settings.MAP_WIDTH * settings.TILE_SIZE
+        map_h = settings.MAP_HEIGHT * settings.TILE_SIZE_Y
+
+        # Left Boundary
+        rects.append(pygame.Rect(map_x - bound_thickness, map_y - bound_thickness, bound_thickness, map_h + (bound_thickness * 2)))
+        # Right Boundary
+        rects.append(pygame.Rect(map_x + map_w, map_y - bound_thickness, bound_thickness, map_h + (bound_thickness * 2)))
+        # Bottom Boundary
+        rects.append(pygame.Rect(map_x, map_y + map_h, map_w, bound_thickness))
+        # -----------------------------------------------
+
         self._cached_rects = rects
         return self._cached_rects
 

@@ -7,13 +7,23 @@ class Ally:
         self.visuals.x = x
         self.visuals.y = y
         self.visuals.speed *= 1.2 
+        # Let the template know it belongs to an Ally wrapper
+        self.visuals.parent_ally = self
         
-        if hasattr(self.visuals, 'damage'):
-            self.visuals.damage += bonus_damage
+       #  UNIFIED DAMAGE CALCULATION -
+        # Base enemy damage (already scaled by level in WaveManager)
+        base_dmg = getattr(self.visuals, 'damage', 1) 
+        
+        #  Add the bonus damage from the player's cards
+        self.visuals.damage = base_dmg + bonus_damage
+        
+        # Specifically fix ranged allies (Archers/Wizards)
+        if hasattr(self.visuals, 'projectile_config'):
+            self.visuals.projectile_config['damage'] = self.visuals.damage
             
         self.is_dead = False
 
-    # --- CRITICAL: These properties ensure the proxy always uses real-time coordinates ---
+    # These properties ensure the proxy always uses real-time coordinates ---
     @property
     def x(self): return self.visuals.x
     @property
@@ -54,14 +64,6 @@ class Ally:
                         
             # Run their normal AI (which now knows about solid_rects)
             self.visuals.update(dt)
-            
-            # MELEE RETALIATION 
-            # If the ally gets close enough to initiate an attack, provoke the enemy
-            attack_range = getattr(self.visuals, 'attack_range', 35)
-            dist = math.hypot(nearest.x - self.x, nearest.y - self.y)
-            
-            if dist <= attack_range + 5:
-                nearest.aggro_target = self
             
         else:
             # --- GUARDIAN MODE (Fixed Front Formation) ---

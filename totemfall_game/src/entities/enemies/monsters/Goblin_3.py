@@ -6,7 +6,7 @@ from gale.animation import Animation
 
 class Goblin_3(BaseEnemy):
     def __init__(self, x: float, y: float):
-        super().__init__(x, y, hp=15, speed=25) 
+        super().__init__(x, y, hp=25, speed=30) 
         self.width = 23 
         self.height = 23
 

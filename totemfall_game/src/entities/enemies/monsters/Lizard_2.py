@@ -6,10 +6,10 @@ from gale.animation import Animation
 
 class Lizard_2(BaseEnemy):
     def __init__(self, x: float, y: float):
-        super().__init__(x, y, hp=20, speed=20) 
+        super().__init__(x, y, hp=25, speed=20) 
         self.width = 29 
         self.height = 22
-        self.attack_range = 150
+        self.attack_range = 145
 
         self.texture_id = 'lizard_2'
         
