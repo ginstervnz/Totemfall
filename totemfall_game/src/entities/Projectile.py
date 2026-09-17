@@ -6,6 +6,7 @@ from gale.animation import Animation
 class Projectile:
     def __init__(self):
         self.active = False #Pool logic it's false if no proyectile
+        self.is_electric = False
         self.x = 0
         self.y = 0
         self.dx = 0
@@ -32,6 +33,7 @@ class Projectile:
         """
         self.active = True
         self.is_exploding = False
+        self.is_electric = config.get('is_electric', False)
         self.x = x
         self.y = y
         self.speed = config.get('speed', 250)
@@ -133,3 +135,25 @@ class Projectile:
         current_surf = self.rotated_frames[frame_idx]
         rect = current_surf.get_rect(center=(render_x, render_y))
         surface.blit(current_surf, rect)
+
+        # PROCEDURAL LIGHTNING VISUALS
+        if getattr(self, 'is_electric', False) and not self.is_exploding:
+            import random
+            # Calculate a dynamic bounding box based on velocity for the sparks
+            offset_x = self.dx * 0.04
+            offset_y = self.dy * 0.04
+            
+            start_pos = (render_x - offset_x, render_y - offset_y)
+            end_pos = (render_x + offset_x, render_y + offset_y)
+            
+            # Generate jagged points
+            points = [start_pos]
+            for _ in range(2):
+                mid_x = (start_pos[0] + end_pos[0]) / 2 + random.uniform(-12, 12)
+                mid_y = (start_pos[1] + end_pos[1]) / 2 + random.uniform(-12, 12)
+                points.append((mid_x, mid_y))
+            points.append(end_pos)
+            
+            # Draw an intense cyan glow (width 3) and a white core (width 1)
+            pygame.draw.lines(surface, (0, 255, 255), False, points, 3)
+            pygame.draw.lines(surface, (255, 255, 255), False, points, 1)

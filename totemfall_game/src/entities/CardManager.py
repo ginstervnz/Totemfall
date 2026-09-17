@@ -13,6 +13,9 @@ from src.entities.cards.SummonUnlockCard import SummonUnlockCard
 from src.entities.cards.SummonSlotCard import SummonSlotCard
 from src.entities.cards.AllyDamageCard import AllyDamageCard
 from src.entities.cards.BlocksCard import BlocksCard
+from src.entities.cards.LightningUnlockCard import LightningUnlockCard
+from src.entities.cards.LightningDamageCard import LightningDamageCard
+from src.entities.cards.TotemShieldCard import TotemShieldCard
 # Import your other cards here as you create them
 
 
@@ -22,7 +25,8 @@ class CardManager:
         self.available_cards = [DamageCard,SpeedUpCard,AtkSpeedUP,
                                 ManaUP,ManaReduce,ShootSpeed,
                                 MoreMana,HealTotem,XPBoost,
-                                SummonUnlockCard, BlocksCard,
+                                SummonUnlockCard, BlocksCard,LightningUnlockCard,
+                                TotemShieldCard,
                                 ] 
         # When you add more, just put them in the list:
         # self.available_cards = [DamageCard, ManaCard, SpeedCard]
@@ -38,6 +42,14 @@ class CardManager:
 
         if AllyDamageCard not in self.available_cards:
             self.available_cards.append(AllyDamageCard)
+
+    def unlock_lightning_upgrades(self) -> None:
+        """Removes the lightning unlock card and adds the damage upgrade."""
+        if LightningUnlockCard in self.available_cards:
+            self.available_cards.remove(LightningUnlockCard)
+
+        if LightningDamageCard not in self.available_cards:
+            self.available_cards.append(LightningDamageCard)
 
     def remove_card(self, card_class) -> None:
         """Removes a specific card class from the available pool."""

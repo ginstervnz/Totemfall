@@ -25,11 +25,11 @@ class BaseEnemy:
     def take_damage(self, amount: int) -> None:
         self.hp -= amount
         self.hit_flash_timer = 0.1
-        print(f"¡Impacto! HP restante: {self.hp}")
+        # Debug: print(f"¡Impacto! HP restante: {self.hp}")
         
         if self.hp <= 0:
             self.is_dead = True
-            print("¡Enemigo derrotado!")
+            # Debug: print("¡Enemigo derrotado!")
 
 
     def _move_with_collisions(self, move_x: float, move_y: float) -> None:

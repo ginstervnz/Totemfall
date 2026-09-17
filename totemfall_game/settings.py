@@ -238,12 +238,6 @@ FRAMES = {
 
 #AudioManager
 
-pygame.mixer.quit()
-pygame.mixer.pre_init(44100, -16, 2, 512)
-pygame.mixer.init()
-pygame.mixer.set_num_channels(32)
-
-
 class AudioManager:
     def __init__(self):
         self.sounds = {}
@@ -321,6 +315,7 @@ SOUNDS = {
     'dead_enemy': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "dead_enemy.wav"),
     'chase': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "chase.mp3"),
     'totemfall': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "totemfall.OGG"),
+    'electro_fire': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "electro_efect.mp3"),
 }
 
 AUDIO_MANAGER.load_sounds(SOUNDS)
@@ -330,6 +325,7 @@ AUDIO_MANAGER.sounds['shoot_enemy'].set_volume(0.5)
 AUDIO_MANAGER.sounds['spawn_card'].set_volume(0.5)
 AUDIO_MANAGER.sounds['hit_totem'].set_volume(0.5)
 AUDIO_MANAGER.sounds['totemfall'].set_volume(0.5)
+AUDIO_MANAGER.sounds['electro_fire'].set_volume(0.5)
 
 # Register your fonts from the fonts folder, for instance:
 # FONTS = {

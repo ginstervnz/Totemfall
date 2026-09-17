@@ -50,17 +50,19 @@ class WaveManager:
         self.current_wave_index += 1
         self.is_active = True
 
-        # Increases by 2 enemies per level.
-        base_level_enemies = 4 + (self.internal_level * 2)
+        # FIX: Lower base enemies for early levels. 
+        # Level 1 starts with ~6 enemies total.
+        base_level_enemies = 4 + int(self.global_level * 2.5)
 
         # We divide the budget by the number of waves in the level.
         enemies_per_wave = base_level_enemies // self.total_waves
 
-        # We assign the enemies, adding a bonus based on the wave number.
+        # We assign the enemies, adding a smaller bonus based on the wave number.
         self.enemies_to_spawn = enemies_per_wave + self.current_wave_index
         
-        self.spawn_interval = max(0.6, 2.0 - (self.internal_level * 0.1))
-        self.spawn_timer = 1.5 # Dramatic pause of 1.5s before the wave starts
+        # FIX: Slower base timer. 3.0s between spawns at level 1.
+        self.spawn_interval = max(0.8, 3.0 - (self.global_level * 0.1))
+        self.spawn_timer = 1.5
 
     def update(self, dt: float) -> None:
         """Handles the spawn timer and transition between consecutive waves."""
@@ -70,9 +72,38 @@ class WaveManager:
         self.spawn_timer -= dt
         
         if self.spawn_timer <= 0 and self.enemies_to_spawn > 0:
-            if self.spawn_enemy(): 
-                self.enemies_to_spawn -= 1
-                self.spawn_timer = self.spawn_interval
+            
+            # --- STRICT EARLY GAME PACING ---
+            if self.global_level <= 3:
+                # Levels 1-3: Absolute 1v1 pacing. Only 1 enemy on screen at a time.
+                if len(self.enemy_list) > 0:
+                    return 
+                max_burst = 1
+            elif self.global_level <= 8:
+                # Levels 4-8: Gentle transition. Max 2 enemies on screen.
+                if len(self.enemy_list) >= 2:
+                    return 
+                max_burst = 2
+            else:
+                # Levels 9+: Gradual difficulty increase. 
+                max_allowed_alive = 2 + int((self.global_level - 8) * 1.5)
+                
+                if len(self.enemy_list) >= max_allowed_alive:
+                    return 
+                
+                max_burst = min(3 + (self.global_level // 8), 6)
+            
+            # Never attempt to spawn more enemies than the remaining budget
+            burst_count = random.randint(1, min(max_burst, self.enemies_to_spawn))
+            
+            # Attempt to spawn the burst
+            for _ in range(burst_count):
+                if self.spawn_enemy(): 
+                    self.enemies_to_spawn -= 1
+            
+            # Randomize the rhythm (50% to 150% of the base interval)
+            if self.enemies_to_spawn > 0:
+                self.spawn_timer = self.spawn_interval * random.uniform(0.5, 1.5)
             
         # WAVE VICTORY CONDITION: Check if wave is completely cleared
         if self.enemies_to_spawn <= 0 and len(self.enemy_list) == 0:

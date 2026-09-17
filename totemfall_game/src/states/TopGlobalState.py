@@ -108,4 +108,4 @@ class TopGlobalState(BaseState):
                 if hasattr(settings, 'AUDIO_MANAGER'):
                     settings.AUDIO_MANAGER.play_sfx('confirm')
                 self.is_transitioning = True
-                Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('main_menu'))
+                Timer.tween(2.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('main_menu'))

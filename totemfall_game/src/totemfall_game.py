@@ -14,6 +14,7 @@ from src.states.GameOverState import GameOverState
 from src.states.VictoryState import VictoryState
 from src.states.TopGlobalState import TopGlobalState
 from src.states.IntroCinematicState import IntroCinematicState
+from src.states.CreditsState import CreditsState
 
 from src.states.NameInputState import NameInputState
 
@@ -42,6 +43,7 @@ class TotemfallGame(Game, InputListener):
             'victory': lambda sm: VictoryState(sm),
             'top': lambda sm: TopGlobalState(sm),
             'name': lambda sm: NameInputState(sm),
+            'credits': lambda sm: CreditsState(sm),
         })
         # We verify whether the save file loaded a valid name.
         if settings.PLAYER_NAME is None:

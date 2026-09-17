@@ -1,5 +1,6 @@
 import pygame
 import math
+import random
 from gale.state import StateMachine
 from gale.animation import Animation
 import settings
@@ -12,14 +13,14 @@ class Player:
         self.y = y
         self.width = 26
         self.height = 18
-        self.speed = 100
+        self.speed = 80
         self.facing_right = True
 
         # Mana logic
         self.max_mana = 100.0
         self.mana = self.max_mana
         self.mana_cost = 10.0 
-        self.mana_regen = 20.5
+        self.mana_regen = 5.5
         self.is_exhausted = False
 
         # Summoning stats
@@ -28,19 +29,26 @@ class Player:
 
 
         #Shot 
-        self.fire_rate = 0.5 
+        self.fire_rate = 0.8 
         self.shoot_timer = self.fire_rate
         self.just_fired = False
         self.cast_animation_timer = 0
 
         self.projectile_config = {
-            'speed': 150,
+            'speed': 100,
             'texture': 'magic_bolt',
             'frames': [0, 1, 2, 3]
         }
 
         self.can_shoot = True
         self.can_destroy_blocks = False
+
+        # LIGHTNING STATS
+        self.has_lightning = False
+        self.lightning_chance = 0.25 
+        self.lightning_damage = 4.0
+        self.shoot_is_electric = False
+
         #Heal
         self.max_hp = 5
         self.hp = self.max_hp
@@ -123,11 +131,15 @@ class Player:
 
         # Shoot
         self.just_fired = False
+        self.shoot_is_electric = False
         self.shoot_timer -= dt
         if self.shoot_timer <= 0 and not self.is_exhausted and self.can_shoot:
             self.shoot_timer = self.fire_rate
             self.just_fired = True
             self.mana -= self.mana_cost
+
+            if self.has_lightning and random.random() < self.lightning_chance:
+                self.shoot_is_electric = True
 
             self.cast_animation_timer = 0.15 
             self.animations['cast'] = Animation([4,5], 0.05)

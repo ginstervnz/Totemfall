@@ -12,12 +12,16 @@ class MainMenuState(BaseState):
         self.is_transitioning = False
 
         # List of options and selection tracker
-        self.options = ['Play', 'Global Top', 'Change Name' , 'Exit']
+        self.options = ['Play', 'Global Top', 'Change Name', 'Credits' , 'Exit']
         self.selected_index = 0
 
         # Timer for our pulse effect
         self.time_alive = 0.0
         self.input_timer = 0.0
+
+        if hasattr(settings, 'AUDIO_MANAGER'):
+            settings.AUDIO_MANAGER.fade_out_and_play('assets/sounds/level_music/menu_sound.mp3')
+
 
         # Load and scale the background ONCE for maximum efficiency.
         if 'menu_bg' in settings.TEXTURES:
@@ -54,11 +58,11 @@ class MainMenuState(BaseState):
         
         # Black shadow (offset +2px on X and +2px on Y)
         title_shadow = title_font.render(title_str, True, (0, 0, 0))
-        surface.blit(title_shadow, (settings.VIRTUAL_WIDTH // 2 - title_shadow.get_width() // 2 + 2, settings.VIRTUAL_HEIGHT // 4 + 2))
+        surface.blit(title_shadow, (settings.VIRTUAL_WIDTH // 2 - title_shadow.get_width() // 2 + 2, settings.VIRTUAL_HEIGHT // 8 + 2))
         
         # Actual white text
         title = title_font.render(title_str, True, (255, 255, 255))
-        surface.blit(title, (settings.VIRTUAL_WIDTH // 2 - title.get_width() // 2, settings.VIRTUAL_HEIGHT // 4))
+        surface.blit(title, (settings.VIRTUAL_WIDTH // 2 - title.get_width() // 2, settings.VIRTUAL_HEIGHT // 8))
 
         # Extract the cursor sprite
         if 'cursor' in settings.TEXTURES and 'cursor_frames' in settings.FRAMES:
@@ -76,28 +80,31 @@ class MainMenuState(BaseState):
             cursor_surf = None
 
         # Render the options dynamically
-        start_y = settings.VIRTUAL_HEIGHT // 2
+        spacing = 30
+        total_menu_height = len(self.options) * spacing
+        # Start a bit below the center to leave room for the title
+        start_y = (settings.VIRTUAL_HEIGHT // 2) - (total_menu_height // 2) + 30 
+
         for i, option in enumerate(self.options):
             if i == self.selected_index:
                 color = (80, 190, 255) # Bright Blue (Mage)
             else:
-                color = (180, 190, 200) # grey
+                color = (180, 190, 200) # Grey
 
             display_text = option
-
             option_font = settings.FONTS['small']
                 
             # Shadow for the options
             option_shadow = option_font.render(display_text, True, (0, 0, 0))
-            shadow_rect = option_shadow.get_rect(center=(settings.VIRTUAL_WIDTH // 2 + 2, start_y + (i * 35) + 2))
+            shadow_rect = option_shadow.get_rect(center=(settings.VIRTUAL_WIDTH // 2 + 2, start_y + (i * spacing) + 2))
             surface.blit(option_shadow, shadow_rect)
             
             # Colored text
             option_surface = option_font.render(display_text, True, color)
-            rect = option_surface.get_rect(center=(settings.VIRTUAL_WIDTH // 2, start_y + (i * 35))) 
+            rect = option_surface.get_rect(center=(settings.VIRTUAL_WIDTH // 2, start_y + (i * spacing))) 
             surface.blit(option_surface, rect)
 
-            # Draw the cursor pointing to the selected option.
+            # Draw the cursor pointing to the selected option
             if i == self.selected_index and cursor_surf:
                 cursor_rect = cursor_surf.get_rect(midleft=(rect.right + 10, rect.centery))
                 surface.blit(cursor_surf, cursor_rect)
@@ -129,14 +136,12 @@ class MainMenuState(BaseState):
             # Menu navigation
             if input_id == 'down':
                 self.selected_index = (self.selected_index + 1) % len(self.options)
-                if hasattr(settings, 'AUDIO_MANAGER'):
-                    settings.AUDIO_MANAGER.play_sfx('hover') # Sound when moving
+                settings.AUDIO_MANAGER.play_sfx('hover') # Sound when moving
                 self.input_timer = 0.15
                     
             elif input_id == 'up':
                 self.selected_index = (self.selected_index - 1) % len(self.options)
-                if hasattr(settings, 'AUDIO_MANAGER'):
-                    settings.AUDIO_MANAGER.play_sfx('hover') # Sonido al moverse
+                settings.AUDIO_MANAGER.play_sfx('hover') # Sonido al moverse
                 self.input_timer = 0.1
             
             # Selection routing
@@ -146,7 +151,8 @@ class MainMenuState(BaseState):
                 if hasattr(settings, 'AUDIO_MANAGER'):
                     settings.AUDIO_MANAGER.play_sfx('confirm')
                 self.is_transitioning = True
-                
+                if selected_option == 'Play' and hasattr(settings, 'AUDIO_MANAGER'):
+                    settings.AUDIO_MANAGER.stop_music_fade(1.0)
                 # Depending on the option, we fade out to a different destination.
                 if selected_option == 'Play':
                     Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('intro'))
@@ -154,6 +160,8 @@ class MainMenuState(BaseState):
                     Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('top'))
                 elif selected_option == 'Change Name':
                     Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('name'))
+                elif selected_option == 'Credits':
+                    Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('credits'))
                 elif selected_option == 'Exit':
                     # exit from the game
                     Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=self.quit_game)

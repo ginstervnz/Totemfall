@@ -61,6 +61,30 @@ class DarkSmokeEffect:
     def render(self, surface):
         self.ps.render(surface)
 
+class LightningEffect:
+    def __init__(self, start_x: float, start_y: float, end_x: float, end_y: float):
+        self.active = True
+        self.start = (start_x, start_y)
+        self.end = (end_x, end_y)
+        self.timer = 0.15 # Stays on screen for 150ms
+        self.points = [self.start]
+        for _ in range(2):
+            mid_x = (self.start[0] + self.end[0]) / 2 + random.uniform(-20, 20)
+            mid_y = (self.start[1] + self.end[1]) / 2 + random.uniform(-20, 20)
+            self.points.append((mid_x, mid_y))
+        self.points.append(self.end)
+
+    def update(self, dt: float) -> None:
+        self.timer -= dt
+        if self.timer <= 0:
+            self.active = False
+
+    def render(self, surface: pygame.Surface) -> None:
+        if self.active:
+            import pygame
+            # Draw an intense cyan outer glow (width 3) and a white core (width 1)
+            pygame.draw.lines(surface, (0, 255, 255), False, self.points, 3)
+            pygame.draw.lines(surface, (255, 255, 255), False, self.points, 1)
 
 class PlayState(BaseState):
     def enter(self, random_mode=False, previous_score=0, previous_kills=None, **kwargs) -> None:
@@ -179,6 +203,10 @@ class PlayState(BaseState):
             self.current_level += 1
 
         self.totem.hp = self.totem.max_hp
+
+        #  RESET SHIELD FOR NEXT LEVEL 
+        if getattr(self.totem, 'has_shield_ability', False):
+            self.totem.reset_shield()
 
         # Clean up the previous army before the new drop
         self.allies.clear()
@@ -373,7 +401,10 @@ class PlayState(BaseState):
                     #Shot
                     for p in self.projectiles:
                         if not p.active:
-                            p.fire(self.player.shoot_x, self.player.shoot_y, self.player.shoot_angle, self.player.shoot_target_dist, self.player.projectile_config)
+                            config = self.player.projectile_config.copy()
+                            if getattr(self.player, 'shoot_is_electric', False):
+                                config['is_electric'] = True
+                            p.fire(self.player.shoot_x, self.player.shoot_y, self.player.shoot_angle, self.player.shoot_target_dist, config)
                             p.source_ally = None 
                             settings.AUDIO_MANAGER.play_sfx('shoot_wizard')
                             break
@@ -428,6 +459,8 @@ class PlayState(BaseState):
                         # The projectile always explodes upon hitting a wall
                         settings.AUDIO_MANAGER.play_sfx('hit_wall')
                         p.explode()
+                        if getattr(p, 'is_electric', False):
+                            self._trigger_chain_lightning(p.x, p.y)
 
         # Update the wave manager (spawns enemies automatically)
         self.wave_manager.update(scaled_dt)
@@ -522,9 +555,13 @@ class PlayState(BaseState):
                                 self.score += (10 * self.current_level)
 
                             #Logic for xp 
-                            xp_reward = random.randint(1000, 2000) * self.current_level
+                            xp_reward = random.randint(10, 100) * self.current_level
                             self.exp_orbs.append(ExpOrb(enemy.x, enemy.y, xp_reward))
-                            
+                        
+                        # CHAIN LIGHTNING FROM ENEMY 
+                        if getattr(p, 'is_electric', False):
+                            # Cast the ray from the center of the hit enemy
+                            self._trigger_chain_lightning(enemy.x + (enemy.width/2), enemy.y + (enemy.height/2))
 
 
             # Ranged enemy attack logic
@@ -609,7 +646,7 @@ class PlayState(BaseState):
 
                 else:
                     self.advance_level()
-                    print(f"Level completed! Advancing to level: {self.current_level}")
+                    # DEBUG: Level print(f"Level completed! Advancing to level: {self.current_level}")
                     self.is_transitioning = False
         
         # Update cooldown timers for dead allies
@@ -751,7 +788,7 @@ class PlayState(BaseState):
 
         font = settings.FONTS['small']
 
-        # --- NUEVO: Lógica visual para el modo infinito ---
+        #  Render INF tetx
         if getattr(self, 'random_mode', False):
             level_str = "Level: INF"
         else:
@@ -767,9 +804,9 @@ class PlayState(BaseState):
 
 
 
-        # --- MODO DEBUG: Dibujar los rectángulos de colisión en rojo ---
-        for rect in self.current_room.get_solid_rects():
-            pygame.draw.rect(surface, (255, 0, 0), rect, 1)
+        # DEBUG:Collision red block
+        #for rect in self.current_room.get_solid_rects():
+            #pygame.draw.rect(surface, (255, 0, 0), rect, 1)
 
 
         # RENDER XP BAR 
@@ -887,5 +924,43 @@ class PlayState(BaseState):
         if input_id == 'confirm' and input_data.pressed:
             if self.level_cooldown <= 0:
                 self.advance_level()
-                print(f"Level advanced to: {self.current_level}")
+                # DEBUG: Level print(f"Level advanced to: {self.current_level}")
                 self.level_cooldown = 0.3
+
+    def _trigger_chain_lightning(self, start_x: float, start_y: float) -> None:
+        # Play the electric impact sound
+        if 'electro_fire' in getattr(settings, 'AUDIO_MANAGER').sounds:
+            settings.AUDIO_MANAGER.play_sfx('electro_fire')
+            
+        distances = []
+        for enemy in self.enemies:
+            # Only target enemies that are fully spawned and currently alive
+            if not getattr(enemy, 'is_spawning', False) and not getattr(enemy, 'is_dead', False) and enemy.hp > 0:
+                ex = enemy.x + (enemy.width / 2)
+                ey = enemy.y + (enemy.height / 2)
+                dist = math.hypot(ex - start_x, ey - start_y)
+                distances.append((dist, enemy, ex, ey))
+                
+        # Sort enemies by proximity (closest first)
+        distances.sort(key=lambda item: item[0])
+        
+        # Chain jumps to a maximum of 2 targets
+        targets = distances[:2]
+        lightning_damage = getattr(self.player, 'lightning_damage', 4.0)
+        
+        for dist, target_enemy, ex, ey in targets:
+            # 1. Render the electric arc connecting the points
+            self.particle_systems.append(LightningEffect(start_x, start_y, ex, ey))
+            
+            # 2. Apply damage and physical blood feedback
+            target_enemy.take_damage(lightning_damage)
+            self.particle_systems.append(BloodEffect(ex, ey))
+            
+            # 3. Handle kills caused specifically by the chain lightning
+            if target_enemy.hp <= 0:
+                if getattr(self, 'random_mode', False):
+                    self.score += 100
+                else:
+                    self.score += (10 * self.current_level)
+                xp_reward = random.randint(1000, 2000) * self.current_level
+                self.exp_orbs.append(ExpOrb(target_enemy.x, target_enemy.y, xp_reward))
