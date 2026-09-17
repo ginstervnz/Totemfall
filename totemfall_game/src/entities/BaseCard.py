@@ -25,6 +25,9 @@ class BaseCard:
         self.particles = []
         self.particle_timer = 0.0
 
+        # MEMORY FLAG FOR HOVER 
+        self.was_hovered = False
+
     def update(self, mx: float, my: float, dt: float) -> None:
         self.rect.x = self.x
         self.rect.y = self.y
@@ -32,6 +35,13 @@ class BaseCard:
         # Dynamic hover scaling
         if not self.locked:
             self.is_hovered = self.rect.collidepoint(mx, my)
+
+            if self.is_hovered and not getattr(self, 'was_hovered', False):
+                import settings 
+                settings.AUDIO_MANAGER.play_sfx('hover_efect')
+            self.was_hovered = self.is_hovered
+
+
             target_scale = 1.15 if self.is_hovered else 1.0
             self.scale += (target_scale - self.scale) * 15 * dt
         else:

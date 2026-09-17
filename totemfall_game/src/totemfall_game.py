@@ -13,6 +13,7 @@ from src.states.OptionsState import OptionsState
 from src.states.GameOverState import GameOverState
 from src.states.VictoryState import VictoryState
 from src.states.TopGlobalState import TopGlobalState
+from src.states.IntroCinematicState import IntroCinematicState
 
 from src.states.NameInputState import NameInputState
 
@@ -34,6 +35,7 @@ class TotemfallGame(Game, InputListener):
 
         self.state_machine = StateMachine({
             'main_menu': lambda sm: MainMenuState(sm),
+            'intro': lambda sm: IntroCinematicState(sm),
             'play': lambda sm: PlayState(sm),
             'options': lambda sm: OptionsState(sm),
             'game_over': lambda sm: GameOverState(sm),

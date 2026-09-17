@@ -12,7 +12,16 @@ class EnemyRangedAttackState(BaseEntityState):
         self.has_shot = False
         self.shoot_time = 1.0 
         
+        # Save their original speed and force it to 0 while they shoot
+        self.base_speed = getattr(self.entity, 'speed', 50)
+        self.entity.speed = 0 
+        
         self.strafe_dir = random.choice([-1, 1])
+
+    def exit(self) -> None:
+        #  Restore their speed when they go back to walking ---
+        if hasattr(self, 'base_speed'):
+            self.entity.speed = self.base_speed
 
     def update(self, dt: float) -> None:
         self.timer -= dt
@@ -38,7 +47,8 @@ class EnemyRangedAttackState(BaseEntityState):
             angle_to_target = math.atan2(target_center_y - center_y, target_center_x - center_x)
             strafe_angle = angle_to_target + (math.pi / 2) * self.strafe_dir
             
-            move_speed = self.entity.speed * 0.7 
+            # --- FIX: Use base_speed for strafing instead of entity.speed (which is now 0) ---
+            move_speed = self.base_speed * 0.7 
             dx = math.cos(strafe_angle) * move_speed * dt
             dy = math.sin(strafe_angle) * move_speed * dt
             
@@ -66,7 +76,6 @@ class EnemyRangedAttackState(BaseEntityState):
                     flip = True
                     self.entity.y -= dy
                     
-            # Reverse the strafe direction if an obstacle or edge is hit
             if flip:
                 self.strafe_dir *= -1
 

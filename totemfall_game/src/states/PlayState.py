@@ -20,6 +20,7 @@ from src.world.RockRoom import RockRoom
 from src.world.WaterRoom import WaterRoom
 from src.world.Pathfinder import Pathfinder
 
+
 import settings
 
 class BloodEffect:
@@ -41,6 +42,24 @@ class BloodEffect:
     def render(self, surface):
         self.ps.render(surface)
 
+class DarkSmokeEffect:
+    def __init__(self, x, y):
+        self.active = True
+        self.ps = ParticleSystem(x, y, n=15, on_finish=self.finish)
+        self.ps.set_life_time(0.5, 1.2)
+        self.ps.set_linear_acceleration(-30, -60, 30, -20) 
+        self.ps.set_area_spread(15, 15)
+        self.ps.set_colors([(80, 80, 80, 255), (40, 40, 40, 200), (20, 20, 20, 100)])
+        self.ps.generate()
+        
+    def finish(self):
+        self.active = False
+        
+    def update(self, dt):
+        self.ps.update(dt)
+        
+    def render(self, surface):
+        self.ps.render(surface)
 
 
 class PlayState(BaseState):
@@ -131,14 +150,19 @@ class PlayState(BaseState):
         """Loads the correct room class based on the global level."""
         if self.current_level <= 8:
             self.current_room = SwampRoom(player=self.player)
+            settings.AUDIO_MANAGER.fade_out_and_play('assets/sounds/level_music/swamp_music.mp3')
         elif self.current_level <= 16:
             self.current_room = InfernoRoom(player=self.player)
+            settings.AUDIO_MANAGER.fade_out_and_play('assets/sounds/level_music/inferno_music.mp3')
         elif self.current_level <= 24:
             self.current_room = CatacombsRoom(player=self.player)
+            settings.AUDIO_MANAGER.fade_out_and_play('assets/sounds/level_music/catacombs_music.mp3')
         elif self.current_level <= 32:
             self.current_room = RockRoom(player=self.player)
+            settings.AUDIO_MANAGER.fade_out_and_play('assets/sounds/level_music/rockroom_music.mp3')
         else:
             self.current_room = WaterRoom(player=self.player)
+            settings.AUDIO_MANAGER.fade_out_and_play('assets/sounds/level_music/wateroom_music.mp3')
         
         # Update the internal density and regenerate
         self._update_room_density()
@@ -204,7 +228,9 @@ class PlayState(BaseState):
 
     def update(self, dt: float) -> None:
         Timer.update(dt)
-        self.player.can_shoot = (len(self.enemies) > 0 and not getattr(self, 'is_transitioning', False)) # We send the Wizard a signal indicating whether or not he can shoot.
+        self.player.can_shoot = (len(self.enemies) > 0 and 
+                                 not getattr(self, 'is_transitioning', False) and 
+                                 not getattr(self, 'is_game_over', False))
     
         # LEVEL UP FREEZE LOGIC 
         if getattr(self, 'is_leveling_up', False):
@@ -232,6 +258,10 @@ class PlayState(BaseState):
         totem_center_x = self.totem.x + (self.totem.width / 2)
         totem_center_y = self.totem.y + (self.totem.height / 2)
 
+        #  QUEUE SYSTEM FOR LEVEL UPS
+        # 1. Store the level before absorbing any orbs in this frame
+        previous_level = self.player.level
+
         for orb in reversed(self.exp_orbs):
             orb.update(scaled_dt, totem_center_x, totem_center_y)
 
@@ -239,57 +269,73 @@ class PlayState(BaseState):
             dist = math.hypot(totem_center_x - orb.x, totem_center_y - orb.y)
             if dist < 15: # Collision threshold
                 orb.active = False
-
-                # Add XP and check for level up!
-                if self.player.add_xp(orb.xp_value):
-                        self.is_leveling_up = True
-                        self.is_card_animating = True # Block interactions
-                        self.active_cards = self.card_manager.get_random_hand(3)
-                        
-                        # INTRO TWEEN 
-                        # Target Y is the center of the screen
-                        target_y = (settings.VIRTUAL_HEIGHT / 2) - 54 
-                        
-                        tweens = []
-                        for card in self.active_cards:
-                            tweens.append((card, {"y": target_y}))
-                            
-                        # Animate all cards rising simultaneously with a bouncy effect
-                        Timer.tween(0.8, tweens, ease_function_name="out_bounce", 
-                                    on_finish=lambda: setattr(self, 'is_card_animating', False))
-
+                
+                # Just add the XP! We DO NOT trigger the UI here anymore.
+                self.player.add_xp(orb.xp_value)
+                settings.AUDIO_MANAGER.play_sfx('exp') 
+            
         # Remove inactive orbs
         self.exp_orbs = [o for o in self.exp_orbs if o.active]
 
+        # 2. Calculate exactly how many levels were gained
+        levels_gained = self.player.level - previous_level
+        if levels_gained > 0:
+            # Add them to our queue (initialize to 0 if it doesn't exist yet)
+            self.pending_level_ups = getattr(self, 'pending_level_ups', 0) + levels_gained
 
-        #Gameover
+        # 3. If we have pending level ups and the UI is NOT currently active, trigger it!
+        if getattr(self, 'pending_level_ups', 0) > 0 and not getattr(self, 'is_leveling_up', False) and not getattr(self, 'is_game_over', False):
+            
+            # Consume one level up from the queue
+            self.pending_level_ups -= 1 
+            
+            self.is_leveling_up = True
+            self.is_card_animating = True # Block interactions
+            self.active_cards = self.card_manager.get_random_hand(3)
+            settings.AUDIO_MANAGER.play_sfx('spawn_card')
+            # INTRO TWEEN 
+            target_y = (settings.VIRTUAL_HEIGHT / 2) - 54 
+            tweens = []
+            for card in self.active_cards:
+                tweens.append((card, {"y": target_y}))
+                
+            Timer.tween(0.8, tweens, ease_function_name="out_bounce", 
+                        on_finish=lambda: setattr(self, 'is_card_animating', False))
+
         # Game Over Cinematic Sequence
         if self.totem.hp <= 0 and not getattr(self, 'is_game_over', False):
             self.is_game_over = True
-            self.game_over_timer = 2.5
+            self.game_over_timer = 3.5 # Time for the shake and smoke to play out
             
-            # We clean up the chaos (We disintegrate the missiles)
+            # Cancel level ups and UI
+            self.is_leveling_up = False
+            self.pending_level_ups = 0
+            self.active_cards.clear()
+            pygame.mouse.set_visible(False)
+            
+            # Clean up the chaos (disintegrate enemy missiles)
             for p in self.enemy_projectiles: p.active = False
             for p in self.projectiles: p.active = False
-            
-            # Massive particle explosion at the Totem
-            for _ in range(6): 
-                self.particle_systems.append(BloodEffect(self.totem.x + 10, self.totem.y + 20))
-                
-            # Destruction Animation: The Totem sinks into the ground over 1.5s.
-            Timer.tween(1.5, [
-                (self.totem, {'y': self.totem.y + 100})
-            ])
-                
-            # Fade OUT to black (255) before changing to GameOverState
-            Timer.tween(2.0, [
-                (self, {'transition_alpha': 255.0})
-            ])
+            self.player.cast_animation_timer = 0
+            self.player.just_fired = False
 
+            # STOP THE MUSIC 
+            settings.AUDIO_MANAGER.stop_music_fade(2.5)
+            #  TRIGGER THE SHAKE (Violent vibration for 2.5 seconds)
+            self.totem.shake_timer = 2.5
+            settings.AUDIO_MANAGER.play_sfx('totemfall')
+            #  CONTINUOUS SMOKE ERUPTION
+            # Spawns dark smoke repeatedly from the Totem's core
+            Timer.every(0.1, lambda: self.particle_systems.append(DarkSmokeEffect(self.totem.x + 19, self.totem.y + 24)), limit=25)
+            
+            #  FADE OUT TO BLACK
+            # After 2 seconds of shaking, start fading to black over 1.5 seconds
+            Timer.after(3.0, lambda: Timer.tween(1.5, [(self, {'transition_alpha': 255.0})]))
+        
         # TIME FREEZE
         if getattr(self, 'is_game_over', False):
             self.game_over_timer -= scaled_dt
-            
+            self.totem.update(scaled_dt)
             # We only allow the particles to update for the visual effect.
             for i in range(len(self.particle_systems) - 1, -1, -1):
                 self.particle_systems[i].update(scaled_dt)
@@ -329,6 +375,7 @@ class PlayState(BaseState):
                         if not p.active:
                             p.fire(self.player.shoot_x, self.player.shoot_y, self.player.shoot_angle, self.player.shoot_target_dist, self.player.projectile_config)
                             p.source_ally = None 
+                            settings.AUDIO_MANAGER.play_sfx('shoot_wizard')
                             break
                 else:
                     if self.player.is_exhausted:
@@ -341,14 +388,45 @@ class PlayState(BaseState):
                 self.player.just_fired = False
                 self.cursor_frame = 3 # Blue
             
-        #Block logic
+        # --- PROJECTILE VS WALL COLLISION ---
         solid_rects = self.current_room.get_solid_rects()
 
         for p in self.projectiles:
             if p.active:
                 p.update(scaled_dt)
-                if not p.is_exploding:
-                    if p.get_collision_rect().collidelist(solid_rects) != -1:
+                
+                if not getattr(p, 'is_exploding', False):
+                    
+                    # Get the exact index of the wall we hit
+                    hit_index = p.get_collision_rect().collidelist(solid_rects)
+                    
+                    if hit_index != -1:
+                        can_destroy = getattr(self.player, 'can_destroy_blocks', False)
+                        
+                        if can_destroy:
+                            # 1. Get the EXACT rectangle of the wall we hit
+                            hit_rect = solid_rects[hit_index]
+                            
+                            # 2. Convert the WALL's position to grid coordinates 
+                            col = int((hit_rect.x - settings.MAP_RENDER_OFFSET_X) // settings.TILE_SIZE)
+                            row = int((hit_rect.y - settings.MAP_RENDER_OFFSET_Y) // settings.TILE_SIZE_Y)
+                            
+                            # 3. Apply the strict bounds (just like the BaseEnemy logic)
+                            if 0 <= col < settings.MAP_WIDTH and 0 <= row < settings.MAP_HEIGHT:
+                                
+                                # RESTRICTION 1: Bottom edge
+                                if row < settings.MAP_HEIGHT - 1:
+                                    
+                                    # RESTRICTION 2: Side edges
+                                    if col > 0 and col < settings.MAP_WIDTH - 1:
+                                        
+                                        # RESTRICTION 3: Overhead protective roof
+                                        if row > 3:
+                                            # If it passes all tests, destroy the block!
+                                            self.current_room.break_block_at(col, row)
+                                                
+                        # The projectile always explodes upon hitting a wall
+                        settings.AUDIO_MANAGER.play_sfx('hit_wall')
                         p.explode()
 
         # Update the wave manager (spawns enemies automatically)
@@ -370,16 +448,19 @@ class PlayState(BaseState):
                 cx = enemy.x + (enemy.width / 2)
                 cy = enemy.y + (enemy.height / 2)
                 
-                # If they glitch into the outer black void or deep into the border walls...
-                if cx < map_left or cx > map_right or cy < map_top or cy > map_bottom:
-                    self.enemies.pop(i) # Silent execution
-                    self.wave_manager.enemies_to_spawn += 1 # Refund the spawn ticket
+                grace_margin = 32
+                if (cx < map_left - grace_margin or cx > map_right + grace_margin or 
+                    cy < map_top - grace_margin or cy > map_bottom + grace_margin):
+                    
+                    self.enemies.pop(i) 
+                    self.wave_manager.enemies_to_spawn += 1 
                     continue
             
             if enemy.is_dead:
                 tex_id = getattr(enemy, 'texture_id', 'goblin')
                 self.kill_counts[tex_id] = self.kill_counts.get(tex_id, 0) + 1
                 self.enemies.pop(i)
+                settings.AUDIO_MANAGER.play_sfx('dead_enemy')
                 continue
             enemy.solid_rects = solid_rects
             enemy.pathfinder = self.pathfinder
@@ -418,12 +499,20 @@ class PlayState(BaseState):
                     
                     if enemy_rect.colliderect(p_rect) and not getattr(enemy, 'is_spawning', False):
                         p.explode()
-                        enemy.take_damage(self.player_damage)
-                        self.particle_systems.append(BloodEffect(enemy.x + (enemy.width / 2), enemy.y + (enemy.height / 2)))
-
-                        # If hit by an ally's arrow, get mad at them!
+                        
+                        #  UNIFIED PROJECTILE DAMAGE 
+                        # If the arrow came from an ally, use their specific damage
                         if hasattr(p, 'source_ally') and p.source_ally is not None:
+                            actual_damage = getattr(p.source_ally.visuals, 'damage', 1)
                             enemy.aggro_target = p.source_ally
+                        else:
+                            # If it came from the main player, use the player's massive damage
+                            actual_damage = self.player_damage
+                            
+                        enemy.take_damage(actual_damage)
+                        
+                        self.particle_systems.append(BloodEffect(enemy.x + (enemy.width / 2), enemy.y + (enemy.height / 2)))
+                        settings.AUDIO_MANAGER.play_sfx('hit_enemy')
 
                         # XP REWARD ON DEATH 
                         if enemy.hp <= 0:
@@ -435,6 +524,7 @@ class PlayState(BaseState):
                             #Logic for xp 
                             xp_reward = random.randint(1000, 2000) * self.current_level
                             self.exp_orbs.append(ExpOrb(enemy.x, enemy.y, xp_reward))
+                            
 
 
             # Ranged enemy attack logic
@@ -448,6 +538,7 @@ class PlayState(BaseState):
                         config = getattr(enemy, 'projectile_config', fallback_config)
                         
                         p.fire(enemy.shoot_x, enemy.shoot_y, enemy.shoot_angle, 9999, config)
+                        settings.AUDIO_MANAGER.play_sfx('shoot_enemy')
                         break
         
         # Update arrows goblin
@@ -463,6 +554,7 @@ class PlayState(BaseState):
                     if totem_rect.colliderect(p_rect):
                         p.explode(texture_id='sparkle', frames=[0, 1, 2, 3]) 
                         self.totem.take_damage(1)
+                        settings.AUDIO_MANAGER.play_sfx('hit_totem')
                         continue
                         
                     # Check collision with Allies
@@ -483,6 +575,7 @@ class PlayState(BaseState):
                     # Check collision with Walls
                     if p.get_collision_rect().collidelist(solid_rects) != -1:
                         p.explode(texture_id='sparkle', frames=[0, 1, 2, 3])
+                        settings.AUDIO_MANAGER.play_sfx('hit_wall')
 
         if not self.wave_manager.is_active and len(self.enemies) == 0 and len(self.exp_orbs) == 0 and not getattr(self, 'is_leveling_up', False) and not getattr(self, 'is_card_animating', False):
 
@@ -527,6 +620,7 @@ class PlayState(BaseState):
             if ally.is_dead:
                 self.ally_cooldowns.append(15.0) 
                 self.allies.pop(i)
+                settings.AUDIO_MANAGER.play_sfx('dead_ally')
                 continue
                 
             # Intercept Ranged Attacks
@@ -572,6 +666,7 @@ class PlayState(BaseState):
                 dust_x = ally_obj.x + (ally_obj.width / 2)
                 dust_y = ally_obj.y + ally_obj.height
                 self.particle_systems.append(DustEffect(dust_x, dust_y))
+                settings.AUDIO_MANAGER.play_sfx('spawn_ally')
             
             Timer.tween(0.8, [(new_ally.visuals, {"y": target_y})], ease_function_name="out_bounce", on_finish=on_ally_drop_finish)
             self.allies.append(new_ally)
@@ -685,7 +780,7 @@ class PlayState(BaseState):
         bar_y = padding
         
         # Calculate the ratio of current XP to Next Level XP
-        xp_ratio = self.player.current_xp / self.player.xp_to_next_level
+        xp_ratio = self.player.xp / self.player.xp_to_next_level
         
         # Calculate how many pixels wide the blue fill should be
         max_fill_width = xp_fill_img.get_width()
@@ -695,12 +790,24 @@ class PlayState(BaseState):
         surface.blit(xp_frame_img, (bar_x, bar_y))
         
         # Crop the blue fill dynamically based on XP ratio
-        if self.player.current_xp > 0:
+        if self.player.xp > 0:
             fill_rect = pygame.Rect(0, 0, current_fill_width, xp_fill_img.get_height())
             dynamic_fill_surface = xp_fill_img.subsurface(fill_rect)
-            
-            # Blit the fill inside the frame 
             surface.blit(dynamic_fill_surface, (bar_x + 2, bar_y + 9))
+
+        # RENDER PLAYER LEVEL ---
+        font_small = settings.FONTS['small']
+        # You can adjust the color or formatting as needed
+        level_str = f"LVL: {getattr(self.player, 'level', 1)}" 
+        level_text = font_small.render(level_str, True, (255, 215, 0)) # Gold color
+        
+        # Assuming your XP bar starts at x=10, y=10. Adjust these coordinates!
+        text_x = 400
+        text_y = 30 
+        surface.blit(level_text, (text_x, text_y))
+        
+        # Then you draw your XP bar next to it, for example at text_x + 60
+
 
         # RENDER LEVEL UP OVERLAY
         if getattr(self, 'is_leveling_up', False):
@@ -739,6 +846,7 @@ class PlayState(BaseState):
                 for card in self.active_cards:
                     if card.is_hovered:
                         # Lock everything
+                        settings.AUDIO_MANAGER.play_sfx('confirm')
                         self.is_card_animating = True
                         for c in self.active_cards:
                             c.locked = True

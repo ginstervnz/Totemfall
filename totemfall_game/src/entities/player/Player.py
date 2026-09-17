@@ -40,7 +40,7 @@ class Player:
         }
 
         self.can_shoot = True
-
+        self.can_destroy_blocks = False
         #Heal
         self.max_hp = 5
         self.hp = self.max_hp
@@ -48,7 +48,7 @@ class Player:
 
         # --- EXPERIENCE SYSTEM ---
         self.level = 1
-        self.current_xp = 0
+        self.xp = 0
         # Formula: 100 * (Level ^ 1.5)
         self.xp_to_next_level = 100
 
@@ -68,23 +68,30 @@ class Player:
     def change_animation(self, animation_id: str) -> None:
         self.current_animation = self.animations[animation_id]
 
-    def add_xp(self, amount: int) -> bool:
-        """Adds experience and handles leveling up."""
-        self.current_xp += amount
-        leveled_up = False
-        # While loop in case the player gains enough XP to level up multiple times
-        while self.current_xp >= self.xp_to_next_level:
-            self.current_xp -= self.xp_to_next_level
+    def add_xp(self, amount: int) -> None:
+        """
+        Adds experience to the player and handles multiple level-ups
+        from a single large XP gain using a while loop.
+        """
+        self.xp += amount
+        
+        # Keep leveling up as long as we have enough XP
+        while self.xp >= getattr(self, 'xp_to_next_level', 100):
+            # Subtract the required XP, keeping the remainder safely
+            self.xp -= self.xp_to_next_level
+            
+            # Increase the player's level
             self.level += 1
             
-            # Recalculate next level requirement using the exponential formula
-            self.xp_to_next_level = int(100 * (self.level ** 1.5))
+            # Scale the required XP for the next level
+            self.xp_to_next_level = int(self.xp_to_next_level * 1.5)
             
-            # Increase max mana on level up
+            # Increase max mana on level up and restore it
             self.max_mana += 10
             self.mana = self.max_mana
-            leveled_up = True
-        return leveled_up
+            
+        # We removed the 'return leveled_up' logic because PlayState 
+        # now handles the level queue automatically!
 
 
     def take_damage(self, amount: int) -> None:

@@ -40,9 +40,20 @@ class EnemyAttackState(BaseEntityState):
         if self.is_swinging:
             self.swing_animation.update(dt)
             frame_idx = self.swing_animation.get_current_frame()
+            
             if frame_idx == self.damage_frame and not self.has_damaged:
-                if hasattr(self.entity, 'target'):
-                    self.entity.target.take_damage(1)
+                if hasattr(self.entity, 'target') and self.entity.target:
+                    
+                    # Use dynamic damage instead of hardcoded 
+                    actual_damage = getattr(self.entity, 'damage', 1)
+                    self.entity.target.take_damage(actual_damage)
+                    
+                    settings.AUDIO_MANAGER.play_sfx('melee')
+        
+                    # If this attacker is an Ally (has parent_ally), force the target to attack back
+                    if hasattr(self.entity, 'parent_ally'):
+                        self.entity.target.aggro_target = self.entity.parent_ally
+                        
                 self.has_damaged = True
 
             if frame_idx == 3:

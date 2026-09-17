@@ -137,6 +137,8 @@ class WaveManager:
             new_enemy.x = spawn_x
             new_enemy.y = spawn_y - 200 
             new_enemy.target = self.totem
+            current_lvl = getattr(self.current_room, 'current_level', 1)
+            new_enemy.scale_stats(current_lvl)
             self.enemy_list.append(new_enemy)
             new_enemy.is_spawning = True
             

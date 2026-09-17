@@ -7,7 +7,7 @@ from gale.animation import Animation
 class Minotaur_3(BaseEnemy):
     def __init__(self, x: float, y: float):
         # Firts dates for enemies
-        super().__init__(x, y, hp=20, speed=30)
+        super().__init__(x, y, hp=35, speed=25)
         self.width = 30
         self.height = 20
 

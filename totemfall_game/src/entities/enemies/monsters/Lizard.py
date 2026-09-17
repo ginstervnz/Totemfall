@@ -9,7 +9,7 @@ class Lizard(BaseEnemy):
         super().__init__(x, y, hp=20, speed=20) 
         self.width = 29 
         self.height = 22
-        self.attack_range = 150
+        self.attack_range = 125
 
         self.texture_id = 'lizard'
         

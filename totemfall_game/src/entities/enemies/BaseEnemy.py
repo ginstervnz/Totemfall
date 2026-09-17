@@ -225,6 +225,30 @@ class BaseEnemy:
                     self.block_to_break = (target_col, target_row)
                     break
 
+    def scale_stats(self, level: int) -> None:
+        """
+        Automatically scales the enemy's core stats based on the current game level.
+        Formula: +15% HP per level, +5% Speed per level.
+        """
+        hp_multiplier = 1.0 + ((level - 1) * 0.15)
+        speed_multiplier = 1.0 + ((level - 1) * 0.05)
+        
+        # Scale HP
+        original_hp = getattr(self, 'hp', 10)
+        self.max_hp = int(original_hp * hp_multiplier)
+        self.hp = self.max_hp
+        
+        # Scale Speed
+        original_speed = getattr(self, 'speed', 20)
+        self.speed = min(150, original_speed * speed_multiplier)
+        
+        # Ensure they all have a base damage stat to scale (Melee and Ranged)
+        if not hasattr(self, 'damage'):
+            self.damage = 1 # Give ranged units a base damage stat
+            
+        self.damage = int(self.damage * hp_multiplier)
+
+
     def render(self, surface: pygame.Surface, texture_id: str, frames_id: str) -> None:
         if not self.current_animation: return
         

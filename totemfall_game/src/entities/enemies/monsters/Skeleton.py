@@ -7,7 +7,7 @@ from gale.animation import Animation
 class Skeleton(BaseEnemy):
     def __init__(self, x: float, y: float):
         # Firts dates for enemies
-        super().__init__(x, y, hp=20, speed=30)
+        super().__init__(x, y, hp=15, speed=30)
         self.width = 19
         self.height = 20
 

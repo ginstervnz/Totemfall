@@ -149,7 +149,7 @@ class MainMenuState(BaseState):
                 
                 # Depending on the option, we fade out to a different destination.
                 if selected_option == 'Play':
-                    Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('play'))
+                    Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('intro'))
                 elif selected_option == 'Global Top':
                     Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('top'))
                 elif selected_option == 'Change Name':
@@ -161,3 +161,4 @@ class MainMenuState(BaseState):
     def quit_game(self):
         pygame.quit()
         sys.exit()
+              
