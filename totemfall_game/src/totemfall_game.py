@@ -6,22 +6,48 @@ import pygame
 from gale.game import Game
 from gale.input_handler import InputData, InputHandler, InputListener
 from gale.state import StateMachine
-
+import settings
 from src.states.MainMenuState import MainMenuState
 from src.states.PlayState import PlayState
 from src.states.OptionsState import OptionsState
 from src.states.GameOverState import GameOverState
+from src.states.VictoryState import VictoryState
+from src.states.TopGlobalState import TopGlobalState
 
+from src.states.NameInputState import NameInputState
 
 class TotemfallGame(Game, InputListener):
     def init(self) -> None:
+        # Configure the window icon
+        try:
+            # We extract the magician's face from the already loaded textures.
+            if 'wizard' in settings.TEXTURES and 'wizard_frames' in settings.FRAMES:
+                wizard_sheet = settings.TEXTURES['wizard']
+                wizard_rect = settings.FRAMES['wizard_frames'][0]
+                icon_surface = wizard_sheet.subsurface(wizard_rect)
+                
+                # Send the image to the OS window manager.
+                pygame.display.set_icon(icon_surface)
+        except Exception as e:
+            print(f"[!] No se pudo cargar el ícono: {e}")
+
+
         self.state_machine = StateMachine({
             'main_menu': lambda sm: MainMenuState(sm),
             'play': lambda sm: PlayState(sm),
             'options': lambda sm: OptionsState(sm),
             'game_over': lambda sm: GameOverState(sm),
+            'victory': lambda sm: VictoryState(sm),
+            'top': lambda sm: TopGlobalState(sm),
+            'name': lambda sm: NameInputState(sm),
         })
-        self.state_machine.change('main_menu')
+        # We verify whether the save file loaded a valid name.
+        if settings.PLAYER_NAME is None:
+            # It's his first time playing. We sent him to register.
+            self.state_machine.change('name')
+        else:
+            # He is already a known player. We're sending him straight to the menu.
+            self.state_machine.change('main_menu')
         InputHandler.register_listener(self)
 
     def update(self, dt: float) -> None:

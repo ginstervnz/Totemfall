@@ -10,6 +10,8 @@ and read them back the same way, with `from gale.conf import settings`.
 import pathlib
 from pathlib import Path
 import pygame
+import json
+import os
 
 from gale import frames
 from gale import input_handler
@@ -29,13 +31,18 @@ input_handler.InputHandler.set_keyboard_action(input_handler.KEY_o, 'options')
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_d, 'right')
 input_handler.InputHandler.set_keyboard_action(input_handler.KEY_a, 'left')
 
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_UP, 'up')
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_w, 'up')
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_DOWN, 'down')
+input_handler.InputHandler.set_keyboard_action(input_handler.KEY_s, 'down')
+
 # Continuous key
 CONTROLS = {
     'left': [pygame.K_LEFT, pygame.K_a],
     'right': [pygame.K_RIGHT, pygame.K_d],
 }
 
-TITLE = 'Totemfall Game'
+TITLE = 'Totemfall'
 
 # Size we want to emulate
 VIRTUAL_WIDTH = 480
@@ -144,6 +151,7 @@ TEXTURES = {
     'icon_XP_boost': pygame.image.load(BASE_DIR / "assets" / "graphics" / "cards"/"icons"/ "exp_boost.png"),
     'xp_orb': pygame.image.load(BASE_DIR / "assets" / "graphics" / "exp_orb.png"),
     'obelisk': scaled_obelisk,
+    'menu_bg': pygame.image.load(BASE_DIR / "assets" / "graphics" / "background" / "Fondo.png"),
 }
 
 # Register your frames, for instance:
@@ -261,7 +269,7 @@ AUDIO_MANAGER = AudioManager()
 # }
 SOUNDS = {
     'confirm': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "select_sound.mp3"),
-
+    'hover': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "change_menu.mp3"),
 
 }
 
@@ -277,3 +285,23 @@ FONTS = {
     
 
 }
+
+# SAVE SYSTEM
+SAVE_FILE = BASE_DIR / "save_data.json"
+PLAYER_NAME = None
+
+def load_save_data():
+    global PLAYER_NAME
+    if os.path.exists(SAVE_FILE):
+        with open(SAVE_FILE, 'r') as f:
+            data = json.load(f)
+            PLAYER_NAME = data.get('player_name', None)
+
+def save_player_name(name: str):
+    global PLAYER_NAME
+    PLAYER_NAME = name
+    with open(SAVE_FILE, 'w') as f:
+        json.dump({'player_name': name}, f)
+
+# We load the file as soon as the game starts.
+load_save_data()

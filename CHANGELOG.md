@@ -80,3 +80,19 @@ Todas las adiciones, cambios y correcciones de este proyecto serán documentadas
 - **Formaciones Defensivas Tácticas:** Los monstruos aliados transicionan a un "Modo Guardián", marchando hacia posiciones de escolta predefinidas frente al obelisco cuando se limpia la oleada.
 - **Sistema de Aggro Dinámico e Intercepción:** Los enemigos evalúan la distancia en tiempo real para priorizar el combate contra los aliados más cercanos en lugar del obelisco. Los proyectiles enemigos ahora también impactan y dañan a las invocaciones.
 - **Animaciones de Aparición (Spawn Drop):** Tanto enemigos como aliados ingresan al campo de batalla cayendo desde el cielo con un efecto de rebote, detonando un nuevo sistema de partículas de impacto (`DustEffect.py`) al tocar el suelo.
+
+
+## [v0.5.0] - Persistencia, Top Global y Modo Infinito
+
+### Añadido
+- **Persistencia de Datos Local:** Implementación del módulo `json` en las configuraciones globales para escribir y leer un archivo `save_data.json` que almacena el nombre del jugador en el disco duro.
+- **Registro de Jugador Estilo Arcade:** Creación del `NameInputState`, una interfaz que permite al usuario registrar un nombre de 5 letras utilizando la navegación por teclado (flechas y Enter), emulando las máquinas recreativas clásicas.
+- **Integración de Top Global (Dreamlo):** Conexión HTTP nativa con la API de Dreamlo para el envío y lectura de puntajes. El proceso se ejecuta en un hilo secundario (`threading`) durante el `GameOverState` y `VictoryState` para evitar bloqueos en el renderizado (congelamiento de fotogramas).
+- **Fondo Dinámico en el Menú Principal:** Integración de una imagen de fondo (`menu_bg`) que se escala automáticamente a la resolución virtual del juego. Se implementó un filtro oscuro semitransparente (`SRCALPHA` a 100 de opacidad) superpuesto al fondo para garantizar la legibilidad y contraste del texto del menú.
+- **Modo Supervivencia (Infinito/Aleatorio):** Nueva característica post-victoria ("Keep Playing") que inyecta una bandera (`random_mode`) al `PlayState`. Esto altera la generación para cargar mundos aleatorios (del 1 al 40), estandariza la ganancia de puntos (100 pts fijos por baja) y cambia el identificador del HUD a "Level: INF", manteniendo intacto el progreso previo del jugador.
+- **Submenús Horizontales:** Rediseño arquitectónico en las pantallas de fin de juego para soportar opciones en el eje X, calculando dinámicamente las posiciones al 35% y 70% del ancho de la pantalla y mapeando las teclas `Left`/`Right`.
+- **Personalización del Sistema Operativo:** Integración de la función nativa `pygame.display.set_icon()` para inyectar dinámicamente un *sprite* del juego (el mago) como ícono en la ventana del sistema, además de la parametrización del título de la aplicación.
+
+### Cambiado
+- **Expansión del Menú Principal:** Se reestructuró la lista de opciones y el enrutamiento del `MainMenuState`. Ahora el jugador puede navegar entre cuatro opciones completas: *Play* (inicia la partida), *Global Top* (conecta con la API de Dreamlo), *Change Name* (modifica el archivo `.json` de persistencia) y *Exit* (cierra el juego de forma segura).
+- **Estandarización de Navegación:** Se corrigió la dirección matemática del cursor en el `MainMenuState` para ajustarse a los estándares de UX.

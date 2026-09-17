@@ -44,8 +44,9 @@ class BloodEffect:
 
 
 class PlayState(BaseState):
-    def enter(self) -> None:
+    def enter(self, random_mode=False, previous_score=0, previous_kills=None, **kwargs) -> None:
         self.platform_y = 22 
+        self.random_mode = random_mode
         
         totem_x = (settings.VIRTUAL_WIDTH // 2) - 19
         wizard_x = settings.VIRTUAL_WIDTH // 2
@@ -71,7 +72,7 @@ class PlayState(BaseState):
         ])
 
         
-        self.kill_counts = {}
+        self.kill_counts = previous_kills or {}
 
         # Cursor
         pygame.mouse.set_visible(False)
@@ -89,7 +90,10 @@ class PlayState(BaseState):
 
 
         # Progression system
-        self.current_level = 1
+        if self.random_mode:
+            self.current_level = random.randint(1, 40) # Choose a random world
+        else:
+            self.current_level = 1
         self.load_world()
 
         self.enemies = []
@@ -118,7 +122,8 @@ class PlayState(BaseState):
         self.ally_cooldowns = [] # Stores timers for dead allies
         self.summon_mana_cost = 40.0        
 
-        
+        #score
+        self.score = previous_score
 
         
 
@@ -143,10 +148,15 @@ class PlayState(BaseState):
 
     def advance_level(self) -> None:
         """Increases the global level and regenerates the map or switches worlds."""
-        self.current_level += 1
+
+        if getattr(self, 'random_mode', False):
+            self.current_level = random.randint(1, 40) # Salta a otro mundo al azar
+        else:
+            self.current_level += 1
+
         self.totem.hp = self.totem.max_hp
 
-        # --- FIX: Clean up the previous army before the new drop ---
+        # Clean up the previous army before the new drop
         self.allies.clear()
         self.ally_cooldowns.clear()
 
@@ -289,7 +299,7 @@ class PlayState(BaseState):
             # When the timer finishes, we perform the state change.
             if self.game_over_timer <= 0:
                 pygame.mouse.set_visible(True)
-                self.state_machine.change('game_over', kill_counts=self.kill_counts)
+                self.state_machine.change('game_over', kill_counts=self.kill_counts, final_score=self.score)
             return
 
         #Hit
@@ -417,6 +427,11 @@ class PlayState(BaseState):
 
                         # XP REWARD ON DEATH 
                         if enemy.hp <= 0:
+                            if getattr(self, 'random_mode', False):
+                                self.score += 100  # Fixed points for fairness in the Global Top
+                            else:
+                                self.score += (10 * self.current_level)
+
                             #Logic for xp 
                             xp_reward = random.randint(1000, 2000) * self.current_level
                             self.exp_orbs.append(ExpOrb(enemy.x, enemy.y, xp_reward))
@@ -495,9 +510,14 @@ class PlayState(BaseState):
 
             # Once the cooldown ends and the characters are no longer visible, we switch maps.
             if self.level_cooldown <= 0:
-                self.advance_level()
-                print(f"Level completed! Advancing to level: {self.current_level}")
-                self.is_transitioning = False
+                if self.current_level > 39:
+                    pygame.mouse.set_visible(True)
+                    self.state_machine.change('victory', kill_counts=self.kill_counts, final_score=self.score)
+
+                else:
+                    self.advance_level()
+                    print(f"Level completed! Advancing to level: {self.current_level}")
+                    self.is_transitioning = False
         
         # Update cooldown timers for dead allies
         for i in range(len(self.allies) - 1, -1, -1):
@@ -636,8 +656,14 @@ class PlayState(BaseState):
 
         font = settings.FONTS['small']
 
+        # --- NUEVO: Lógica visual para el modo infinito ---
+        if getattr(self, 'random_mode', False):
+            level_str = "Level: INF"
+        else:
+            level_str = f"Level: {self.current_level}"
+
         # Render the text into a surface (Text, Antialiasing, Color RGB)
-        level_text = font.render(f"Level: {self.current_level}", True, (255, 255, 255))
+        level_text = font.render(level_str, True, (255, 255, 255))
         
         # Position X aligns with the first heart, Position Y goes below the hearts + 8 pixels of padding
         text_x = 10
