@@ -4,8 +4,6 @@ import pygame
 from gale.timer import Timer
 from src.entities.DustEffect import DustEffect
 
-
-
 class WaveManager:
     def __init__(self, enemy_list: list, totem,current_room,particle_systems: list) -> None:
         # We hold a reference to the PlayState's enemy list and totem
@@ -32,11 +30,11 @@ class WaveManager:
         """Initializes the logic for the entire level, calculating global difficulty."""
         self.global_level = global_level
         self.world_index = (global_level - 1) // 8
-        self.internal_level = ((global_level - 1) % 8) + 1 
+        self.internal_level = ((global_level - 1) % 8) + 1
         
         # Pacing math: Maximum 3 waves per level
         # Levels 1-2: 1 Wave | Levels 3-5: 2 Waves | Levels 6-8: 3 Waves
-        self.total_waves = min(3, 1 + (self.internal_level // 3))
+        self.total_waves = min(4, 1 + (self.global_level // 4))
         self.current_wave_index = 0
         
         # Stat scaling: +50% health for each new world
@@ -52,7 +50,7 @@ class WaveManager:
 
         # FIX: Lower base enemies for early levels. 
         # Level 1 starts with ~6 enemies total.
-        base_level_enemies = 4 + int(self.global_level * 2.5)
+        base_level_enemies = 5 + int(self.global_level * 1.5)
 
         # We divide the budget by the number of waves in the level.
         enemies_per_wave = base_level_enemies // self.total_waves
@@ -60,8 +58,8 @@ class WaveManager:
         # We assign the enemies, adding a smaller bonus based on the wave number.
         self.enemies_to_spawn = enemies_per_wave + self.current_wave_index
         
-        # FIX: Slower base timer. 3.0s between spawns at level 1.
-        self.spawn_interval = max(0.8, 3.0 - (self.global_level * 0.1))
+        # FIX: We prevent many of them from appearing at high levels..
+        self.spawn_interval = max(1.2, 3.0 - (self.global_level * 0.05))
         self.spawn_timer = 1.5
 
     def update(self, dt: float) -> None:
@@ -76,7 +74,7 @@ class WaveManager:
             # --- STRICT EARLY GAME PACING ---
             if self.global_level <= 3:
                 # Levels 1-3: Absolute 1v1 pacing. Only 1 enemy on screen at a time.
-                if len(self.enemy_list) > 0:
+                if len(self.enemy_list) >= 1:
                     return 
                 max_burst = 1
             elif self.global_level <= 8:
@@ -86,12 +84,12 @@ class WaveManager:
                 max_burst = 2
             else:
                 # Levels 9+: Gradual difficulty increase. 
-                max_allowed_alive = 2 + int((self.global_level - 8) * 1.5)
+                max_allowed_alive = 2 + (self.global_level // 4)
                 
                 if len(self.enemy_list) >= max_allowed_alive:
                     return 
                 
-                max_burst = min(3 + (self.global_level // 8), 6)
+                max_burst = min(4, self.enemies_to_spawn)
             
             # Never attempt to spawn more enemies than the remaining budget
             burst_count = random.randint(1, min(max_burst, self.enemies_to_spawn))
@@ -169,7 +167,7 @@ class WaveManager:
             new_enemy.y = spawn_y - 200 
             new_enemy.target = self.totem
             current_lvl = getattr(self.current_room, 'current_level', 1)
-            new_enemy.scale_stats(current_lvl)
+            new_enemy.scale_stats(self.global_level)
             self.enemy_list.append(new_enemy)
             new_enemy.is_spawning = True
             

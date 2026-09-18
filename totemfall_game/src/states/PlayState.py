@@ -2,7 +2,6 @@ import pygame
 import random
 import math
 from gale.state import BaseState
-from gale.particle_system import ParticleSystem
 from gale.timer import Timer
 from gale.input_handler import InputData
 from src.entities.DustEffect import DustEffect
@@ -19,72 +18,10 @@ from src.world.CatacombsRoom import CatacombsRoom
 from src.world.RockRoom import RockRoom
 from src.world.WaterRoom import WaterRoom
 from src.world.Pathfinder import Pathfinder
-
+from src.entities.Effects import BloodEffect, DarkSmokeEffect, LightningEffect
+from src.ui.HUD import HUD
 
 import settings
-
-class BloodEffect:
-    def __init__(self, x, y):
-        self.active = True
-        self.ps = ParticleSystem(x, y, n=10, on_finish=self.finish)
-        self.ps.set_life_time(0.1, 0.2)
-        self.ps.set_linear_acceleration(-25, -40, 25, 10)
-        self.ps.set_area_spread(2, 2)
-        self.ps.set_colors([(180, 20, 20, 255), (100, 10, 10, 150)])
-        self.ps.generate()
-        
-    def finish(self):
-        self.active = False
-        
-    def update(self, dt):
-        self.ps.update(dt)
-        
-    def render(self, surface):
-        self.ps.render(surface)
-
-class DarkSmokeEffect:
-    def __init__(self, x, y):
-        self.active = True
-        self.ps = ParticleSystem(x, y, n=15, on_finish=self.finish)
-        self.ps.set_life_time(0.5, 1.2)
-        self.ps.set_linear_acceleration(-30, -60, 30, -20) 
-        self.ps.set_area_spread(15, 15)
-        self.ps.set_colors([(80, 80, 80, 255), (40, 40, 40, 200), (20, 20, 20, 100)])
-        self.ps.generate()
-        
-    def finish(self):
-        self.active = False
-        
-    def update(self, dt):
-        self.ps.update(dt)
-        
-    def render(self, surface):
-        self.ps.render(surface)
-
-class LightningEffect:
-    def __init__(self, start_x: float, start_y: float, end_x: float, end_y: float):
-        self.active = True
-        self.start = (start_x, start_y)
-        self.end = (end_x, end_y)
-        self.timer = 0.15 # Stays on screen for 150ms
-        self.points = [self.start]
-        for _ in range(2):
-            mid_x = (self.start[0] + self.end[0]) / 2 + random.uniform(-20, 20)
-            mid_y = (self.start[1] + self.end[1]) / 2 + random.uniform(-20, 20)
-            self.points.append((mid_x, mid_y))
-        self.points.append(self.end)
-
-    def update(self, dt: float) -> None:
-        self.timer -= dt
-        if self.timer <= 0:
-            self.active = False
-
-    def render(self, surface: pygame.Surface) -> None:
-        if self.active:
-            import pygame
-            # Draw an intense cyan outer glow (width 3) and a white core (width 1)
-            pygame.draw.lines(surface, (0, 255, 255), False, self.points, 3)
-            pygame.draw.lines(surface, (255, 255, 255), False, self.points, 1)
 
 class PlayState(BaseState):
     def enter(self, random_mode=False, previous_score=0, previous_kills=None, saved_player=None, **kwargs) -> None:
@@ -212,6 +149,7 @@ class PlayState(BaseState):
             self.current_level += 1
 
         self.totem.hp = self.totem.max_hp
+        self.player.mana = self.player.max_manac
 
         #  RESET SHIELD FOR NEXT LEVEL 
         if getattr(self.totem, 'has_shield_ability', False):
@@ -749,17 +687,6 @@ class PlayState(BaseState):
         #Render player
         self.player.render(surface)
 
-        # RENDER MANA 
-        bar_width = 30
-        bar_height = 4
-        bar_x = self.player.x + (self.player.width / 2) - (bar_width / 2)
-        bar_y = self.player.y + self.player.height + 4
-        mana_ratio = self.player.mana / self.player.max_mana
-        current_bar_width = max(0, int(bar_width * mana_ratio))
-        pygame.draw.rect(surface, (20, 20, 30), (bar_x, bar_y, bar_width, bar_height))
-        if current_bar_width > 0:
-            pygame.draw.rect(surface, (80, 150, 220), (bar_x, bar_y, current_bar_width, bar_height))
-
         #Render shot
         for p in self.projectiles:
             p.render(surface)
@@ -776,105 +703,21 @@ class PlayState(BaseState):
         for p in self.enemy_projectiles:
             p.render(surface)
 
-        #Render heal
-        heart_img = settings.TEXTURES['heart']
-        full_heart = heart_img.subsurface(settings.FRAMES['heart_frames'][0])
-        empty_heart = heart_img.subsurface(settings.FRAMES['heart_frames'][2])
-        scale_mult = 2
-        new_width = full_heart.get_width() * scale_mult
-        new_height = full_heart.get_height() * scale_mult
-        
-        full_heart = pygame.transform.scale(full_heart, (new_width, new_height))
-        empty_heart = pygame.transform.scale(empty_heart, (new_width, new_height))
-        
-        for i in range(self.totem.max_hp):
-            hx = 10 + (i * (new_width + 4))
-            hy = 10
-            if i < self.totem.hp:
-                surface.blit(full_heart, (hx, hy))
-            else:
-                surface.blit(empty_heart, (hx, hy))
-
-        font = settings.FONTS['small']
-
-        #  Render INF tetx
-        if getattr(self, 'random_mode', False):
-            level_str = "Level: INF"
-        else:
-            level_str = f"Level: {self.current_level}"
-
-        # Render the text into a surface (Text, Antialiasing, Color RGB)
-        level_text = font.render(level_str, True, (255, 255, 255))
-        
-        # Position X aligns with the first heart, Position Y goes below the hearts + 8 pixels of padding
-        text_x = 10
-        text_y = 10 + new_height + 8 
-        surface.blit(level_text, (text_x, text_y))
-
-
 
         # DEBUG:Collision red block
         #for rect in self.current_room.get_solid_rects():
             #pygame.draw.rect(surface, (255, 0, 0), rect, 1)
 
-
-        # RENDER XP BAR 
-        xp_frame_img = settings.TEXTURES['xp_frame']
-        xp_fill_img = settings.TEXTURES['xp_fill']
-        padding = 10
-        bar_x = settings.VIRTUAL_WIDTH - xp_frame_img.get_width() - padding
-        bar_y = padding
-        
-        # Calculate the ratio of current XP to Next Level XP
-        xp_ratio = self.player.xp / self.player.xp_to_next_level
-        
-        # Calculate how many pixels wide the blue fill should be
-        max_fill_width = xp_fill_img.get_width()
-        current_fill_width = max(1, int(max_fill_width * xp_ratio))
-        
-        # Draw the empty frame first
-        surface.blit(xp_frame_img, (bar_x, bar_y))
-        
-        # Crop the blue fill dynamically based on XP ratio
-        if self.player.xp > 0:
-            fill_rect = pygame.Rect(0, 0, current_fill_width, xp_fill_img.get_height())
-            dynamic_fill_surface = xp_fill_img.subsurface(fill_rect)
-            surface.blit(dynamic_fill_surface, (bar_x + 2, bar_y + 9))
-
-        # RENDER PLAYER LEVEL ---
-        font_small = settings.FONTS['small']
-        # You can adjust the color or formatting as needed
-        level_str = f"LVL: {getattr(self.player, 'level', 1)}" 
-        level_text = font_small.render(level_str, True, (255, 215, 0)) # Gold color
-        
-        # Assuming your XP bar starts at x=10, y=10. Adjust these coordinates!
-        text_x = 400
-        text_y = 30 
-        surface.blit(level_text, (text_x, text_y))
-        
-        # Then you draw your XP bar next to it, for example at text_x + 60
-
-
-        # RENDER LEVEL UP OVERLAY
-        if getattr(self, 'is_leveling_up', False):
-            # Draw a dark semi-transparent overlay
+        # We delegate all static drawing to the optimized HUD.
+        if not getattr(self, 'is_leveling_up', False):
+            HUD.render(surface, self.player, self.totem, self.current_level, getattr(self, 'random_mode', False), self.cursor_frame)
+        else:
+            # If we are leveling up, we draw the overlay and the cards.
             overlay = pygame.Surface((settings.VIRTUAL_WIDTH, settings.VIRTUAL_HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 120))
             surface.blit(overlay, (0, 0))
-            
-            # Render all 3 cards on top
-            for card in self.active_cards:
+            for card in self.active_cards: 
                 card.render(surface)
-        
-        else: 
-            # Cursor
-            mx, my = pygame.mouse.get_pos()
-            virtual_mx = mx * (settings.VIRTUAL_WIDTH / settings.WINDOW_WIDTH)
-            virtual_my = my * (settings.VIRTUAL_HEIGHT / settings.WINDOW_HEIGHT)
-            cursor_img = settings.TEXTURES['cursor']
-            frame_rect = settings.FRAMES['cursor_frames'][self.cursor_frame]
-            cursor_surf = cursor_img.subsurface(frame_rect)
-            surface.blit(cursor_surf, (virtual_mx - (frame_rect.width / 2), virtual_my - (frame_rect.height / 2)))
 
          # Cinematic Effect (Iris Wipe)
         if hasattr(self, 'transition_alpha') and self.transition_alpha > 0:
@@ -971,5 +814,5 @@ class PlayState(BaseState):
                     self.score += 100
                 else:
                     self.score += (10 * self.current_level)
-                xp_reward = random.randint(1000, 2000) * self.current_level
+                xp_reward = random.randint(10, 100) * self.current_level
                 self.exp_orbs.append(ExpOrb(target_enemy.x, target_enemy.y, xp_reward))

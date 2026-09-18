@@ -300,7 +300,7 @@ AUDIO_MANAGER = AudioManager()
 # }
 SOUNDS = {
     'confirm': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "select_sound.mp3"),
-    'hover': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "change_menu.mp3"),
+    'hover': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "change_menu.wav"),
     'hit_enemy': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit_enemy.wav"),
     'hit_totem': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit_totem.wav"),
     'hit_wall': pygame.mixer.Sound(BASE_DIR / "assets" / "sounds" / "hit_wall.wav"),

@@ -227,26 +227,29 @@ class BaseEnemy:
 
     def scale_stats(self, level: int) -> None:
         """
-        Automatically scales the enemy's core stats based on the current game level.
-        Formula: +15% HP per level, +5% Speed per level.
+        Scales with initial weakness.
+        Level 1: Starts at ~45% of base stats.
+        Level 12: Reaches 100% of original power.
+        High levels: Grows exponentially.
         """
-        hp_multiplier = 1.0 + ((level - 1) * 0.15)
-        speed_multiplier = 1.0 + ((level - 1) * 0.05)
+        hp_multiplier = 0.4 + (level * 0.05)
+        speed_multiplier = 0.7 + (level * 0.02)
         
         # Scale HP
         original_hp = getattr(self, 'hp', 10)
-        self.max_hp = int(original_hp * hp_multiplier)
+        self.max_hp = max(1, int(original_hp * hp_multiplier))
         self.hp = self.max_hp
         
         # Scale Speed
         original_speed = getattr(self, 'speed', 20)
         self.speed = min(150, original_speed * speed_multiplier)
-        
+
         # Ensure they all have a base damage stat to scale (Melee and Ranged)
         if not hasattr(self, 'damage'):
             self.damage = 1 # Give ranged units a base damage stat
-            
-        self.damage = int(self.damage * hp_multiplier)
+
+        damage_multiplier = 0.5 + (level * 0.03)
+        self.damage = max(1, int(self.damage * damage_multiplier))
 
 
     def render(self, surface: pygame.Surface, texture_id: str, frames_id: str) -> None:

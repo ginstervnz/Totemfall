@@ -8,7 +8,7 @@ import random
 class NameInputState(BaseState):
     def enter(self) -> None:
         self.chars = [65, 65, 65, 65, 65] # ASCII codes for "A A A A A"
-        self.cursor_pos = 0 # Which letter we are editing (0 to 4)
+        self.cursor_pos = 0 # Which letter we are editing (0 to 4), 5 (Save), 6 (Cancel)
         self.is_transitioning = False
         self.transition_alpha = 0.0
         self.input_timer = 0.0
@@ -39,8 +39,42 @@ class NameInputState(BaseState):
             if i == self.cursor_pos:
                 pygame.draw.rect(surface, (80, 190, 255), (start_x + (i * 25), 135, 18, 3))
 
-        info = font_small.render("Use the ARROWS to change. Press ENTER to confirm.", True, (150, 150, 150))
-        surface.blit(info, (settings.VIRTUAL_WIDTH // 2 - info.get_width() // 2, settings.VIRTUAL_HEIGHT - 30))
+        # CURSOR EXTRACTION FOR THE MENU
+        if 'cursor' in settings.TEXTURES and 'cursor_frames' in settings.FRAMES:
+            cursor_img = settings.TEXTURES['cursor']
+            cursor_frame = settings.FRAMES['cursor_frames'][0]
+            original_cursor = cursor_img.subsurface(cursor_frame)
+            scale_factor = 0.75 
+            new_width = int(original_cursor.get_width() * scale_factor)
+            new_height = int(original_cursor.get_height() * scale_factor)
+            cursor_surf = pygame.transform.scale(original_cursor, (new_width, new_height))
+        else:
+            cursor_surf = None
+
+        # HORIZONTAL SUBMENU RENDERING
+        options = ['Save', 'Cancel']
+        option_y = settings.VIRTUAL_HEIGHT - 40
+        positions_x = [settings.VIRTUAL_WIDTH * 0.35, settings.VIRTUAL_WIDTH * 0.65]
+
+        for i, option in enumerate(options):
+            # Position 5 is 'Save' (index 0), Position 6 is 'Cancel' (index 1)
+            is_selected = (self.cursor_pos == i + 5)
+            color = (80, 190, 255) if is_selected else (150, 150, 150)
+            
+            option_shadow = font_small.render(option, True, (0, 0, 0))
+            shadow_rect = option_shadow.get_rect(center=(positions_x[i] + 2, option_y + 2))
+            surface.blit(option_shadow, shadow_rect)
+            
+            option_surface = font_small.render(option, True, color)
+            rect = option_surface.get_rect(center=(positions_x[i], option_y))
+            surface.blit(option_surface, rect)
+            
+            if is_selected and cursor_surf:
+                cursor_rect = cursor_surf.get_rect(midleft=(rect.right + 10, rect.centery))
+                surface.blit(cursor_surf, cursor_rect)
+
+        info = font_small.render("ARROWS to edit. ENTER to confirm. ESC to Cancel.", True, (150, 150, 150))
+        surface.blit(info, (settings.VIRTUAL_WIDTH // 2 - info.get_width() // 2, settings.VIRTUAL_HEIGHT - 15))
 
         # Alpha Fade Overlay
         if self.transition_alpha > 0:
@@ -63,26 +97,33 @@ class NameInputState(BaseState):
                 self.input_timer = 0.15
                 
                 if input_id == 'right':
-                    self.cursor_pos = min(4, self.cursor_pos + 1)
+                    self.cursor_pos = min(6, self.cursor_pos + 1)
                 elif input_id == 'left':
                     self.cursor_pos = max(0, self.cursor_pos - 1)
                 elif input_id == 'up':
-                    # Advance the letter (A -> B -> C). 90 is 'Z'.
-                    self.chars[self.cursor_pos] = 65 if self.chars[self.cursor_pos] == 90 else self.chars[self.cursor_pos] + 1
+                    if self.cursor_pos < 5:
+                        # Advance the letter (A -> B -> C). 90 is 'Z'.
+                        self.chars[self.cursor_pos] = 65 if self.chars[self.cursor_pos] == 90 else self.chars[self.cursor_pos] + 1
                 elif input_id == 'down':
-                    # Go back one letter (C -> B -> A)
-                    self.chars[self.cursor_pos] = 90 if self.chars[self.cursor_pos] == 65 else self.chars[self.cursor_pos] - 1
+                    if self.cursor_pos < 5:
+                        # Go back one letter (C -> B -> A)
+                        self.chars[self.cursor_pos] = 90 if self.chars[self.cursor_pos] == 65 else self.chars[self.cursor_pos] - 1
                     
             elif input_id == 'confirm':
                 if hasattr(settings, 'AUDIO_MANAGER'):
                     settings.AUDIO_MANAGER.play_sfx('confirm')
                 self.is_transitioning = True
-                    
-                # We transform the list of ASCII codes into a string.
-                base_name = "".join([chr(c) for c in self.chars])
 
-                pin = random.randint(1000, 9999)
-                final_name = f"{base_name}-{pin}"
+                # LOGICAL ROUTING: If set to 'Cancel' or the exit key is pressed
+                if self.cursor_pos == 6 or input_id == 'quit':
+                    Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('main_menu'))
+                    return
+                
+                # LOGICAL ROUTING: If you press ENTER on the letters (0–4) or on 'Save' (5)
+                else:
+                    base_name = "".join([chr(c) for c in self.chars])
+                    pin = random.randint(1000, 9999)
+                    final_name = f"{base_name}-{pin}"
 
                 try:
                     print(f"[*] Intentando guardar el nombre: {final_name}...")
