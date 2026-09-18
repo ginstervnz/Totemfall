@@ -19,8 +19,8 @@ class Player:
         # Mana logic
         self.max_mana = 100.0
         self.mana = self.max_mana
-        self.mana_cost = 10.0 
-        self.mana_regen = 5.5
+        self.mana_cost = 9.0 
+        self.mana_regen = 8.5
         self.is_exhausted = False
 
         # Summoning stats
@@ -29,13 +29,13 @@ class Player:
 
 
         #Shot 
-        self.fire_rate = 0.8 
+        self.fire_rate = 0.6 
         self.shoot_timer = self.fire_rate
         self.just_fired = False
         self.cast_animation_timer = 0
 
         self.projectile_config = {
-            'speed': 100,
+            'speed': 120,
             'texture': 'magic_bolt',
             'frames': [0, 1, 2, 3]
         }
@@ -46,7 +46,7 @@ class Player:
         # LIGHTNING STATS
         self.has_lightning = False
         self.lightning_chance = 0.25 
-        self.lightning_damage = 4.0
+        self.lightning_damage = 5.0
         self.shoot_is_electric = False
 
         #Heal
@@ -92,7 +92,7 @@ class Player:
             self.level += 1
             
             # Scale the required XP for the next level
-            self.xp_to_next_level = int(self.xp_to_next_level * 1.5)
+            self.xp_to_next_level = int(self.xp_to_next_level * 1.2)
             
             # Increase max mana on level up and restore it
             self.max_mana += 10

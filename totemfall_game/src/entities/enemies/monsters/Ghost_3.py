@@ -9,7 +9,7 @@ class Ghost_3(BaseEnemy):
         super().__init__(x, y, hp=25, speed=25) 
         self.width = 29 
         self.height = 22
-        self.attack_range = 135
+        self.attack_range = 100
 
         self.texture_id = 'ghost_3'
         

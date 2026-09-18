@@ -149,7 +149,7 @@ class PlayState(BaseState):
             self.current_level += 1
 
         self.totem.hp = self.totem.max_hp
-        self.player.mana = self.player.max_manac
+        self.player.mana = self.player.max_mana
 
         #  RESET SHIELD FOR NEXT LEVEL 
         if getattr(self.totem, 'has_shield_ability', False):
@@ -416,22 +416,28 @@ class PlayState(BaseState):
         for i in range(len(self.enemies) - 1, -1, -1):
             enemy = self.enemies[i]
 
-          # --- INSTA-KILL ZONE (FAILSAFE) ---
+            # Calculate the exact pixel borders of the procedural map
+            map_left = settings.MAP_RENDER_OFFSET_X
+            map_right = settings.MAP_RENDER_OFFSET_X + (settings.MAP_WIDTH * settings.TILE_SIZE)
+            map_top = settings.MAP_RENDER_OFFSET_Y
+            map_bottom = settings.MAP_RENDER_OFFSET_Y + (settings.MAP_HEIGHT * settings.TILE_SIZE_Y)
+            
+            # We use the center of the enemy to be precise
+            cx = enemy.x + (enemy.width / 2)
+            cy = enemy.y + (enemy.height / 2)
+            grace_margin = 32
+
+            # X-AXIS FAILSAFE (Active even during drop animation) 
+            # If spawned out of lateral bounds, delete immediately while still hidden in the sky
+            if cx < map_left - grace_margin or cx > map_right + grace_margin:
+                self.enemies.pop(i) 
+                self.wave_manager.enemies_to_spawn += 1 
+                continue
+
+            # Y-AXIS FAILSAFE
+            # Protected by is_spawning so they don't die while falling from y = -200
             if not getattr(enemy, 'is_spawning', False):
-                # Calculate the exact pixel borders of the procedural map
-                map_left = settings.MAP_RENDER_OFFSET_X
-                map_right = settings.MAP_RENDER_OFFSET_X + (settings.MAP_WIDTH * settings.TILE_SIZE)
-                map_top = settings.MAP_RENDER_OFFSET_Y
-                map_bottom = settings.MAP_RENDER_OFFSET_Y + (settings.MAP_HEIGHT * settings.TILE_SIZE_Y)
-                
-                # We use the center of the enemy to be precise
-                cx = enemy.x + (enemy.width / 2)
-                cy = enemy.y + (enemy.height / 2)
-                
-                grace_margin = 32
-                if (cx < map_left - grace_margin or cx > map_right + grace_margin or 
-                    cy < map_top - grace_margin or cy > map_bottom + grace_margin):
-                    
+                if cy < map_top - grace_margin or cy > map_bottom + grace_margin:
                     self.enemies.pop(i) 
                     self.wave_manager.enemies_to_spawn += 1 
                     continue
@@ -775,7 +781,7 @@ class PlayState(BaseState):
 
         if input_id == 'confirm' and input_data.pressed:
             if self.level_cooldown <= 0:
-                self.advance_level()
+                # DEBUG: self.advance_level()
                 # DEBUG: Level print(f"Level advanced to: {self.current_level}")
                 self.level_cooldown = 0.3
 

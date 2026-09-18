@@ -20,7 +20,7 @@ class Dragon(BaseEnemy):
         self.attack_damage_frame = 3
         
         # --- RANGED CONFIG (Same logic as Arc_Orc) ---
-        self.attack_range = 200 
+        self.attack_range = 100 
         self.projectile_config = {'speed': 180, 'texture': 'fire_bolt', 'frames': [0, 1, 2, 3]}
         self.just_fired = False
         self.shoot_angle = 0.0

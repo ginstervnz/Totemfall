@@ -48,18 +48,12 @@ class WaveManager:
         self.current_wave_index += 1
         self.is_active = True
 
-        # FIX: Lower base enemies for early levels. 
-        # Level 1 starts with ~6 enemies total.
         base_level_enemies = 5 + int(self.global_level * 1.5)
-
-        # We divide the budget by the number of waves in the level.
         enemies_per_wave = base_level_enemies // self.total_waves
-
-        # We assign the enemies, adding a smaller bonus based on the wave number.
         self.enemies_to_spawn = enemies_per_wave + self.current_wave_index
         
-        # FIX: We prevent many of them from appearing at high levels..
-        self.spawn_interval = max(1.2, 3.0 - (self.global_level * 0.05))
+        # Faster base interval since we are no longer spawning in bursts
+        self.spawn_interval = max(0.6, 2.0 - (self.global_level * 0.05))
         self.spawn_timer = 1.5
 
     def update(self, dt: float) -> None:
@@ -73,47 +67,33 @@ class WaveManager:
             
             # --- STRICT EARLY GAME PACING ---
             if self.global_level <= 3:
-                # Levels 1-3: Absolute 1v1 pacing. Only 1 enemy on screen at a time.
                 if len(self.enemy_list) >= 1:
                     return 
-                max_burst = 1
             elif self.global_level <= 8:
-                # Levels 4-8: Gentle transition. Max 2 enemies on screen.
                 if len(self.enemy_list) >= 2:
                     return 
-                max_burst = 2
             else:
-                # Levels 9+: Gradual difficulty increase. 
                 max_allowed_alive = 2 + (self.global_level // 4)
-                
                 if len(self.enemy_list) >= max_allowed_alive:
                     return 
-                
-                max_burst = min(4, self.enemies_to_spawn)
             
-            # Never attempt to spawn more enemies than the remaining budget
-            burst_count = random.randint(1, min(max_burst, self.enemies_to_spawn))
+            # Spawn strictly ONE enemy at a time to naturally desynchronize their attack timers
+            if self.spawn_enemy(): 
+                self.enemies_to_spawn -= 1
             
-            # Attempt to spawn the burst
-            for _ in range(burst_count):
-                if self.spawn_enemy(): 
-                    self.enemies_to_spawn -= 1
-            
-            # Randomize the rhythm (50% to 150% of the base interval)
+            # Shorter, randomized interval for the next single spawn
             if self.enemies_to_spawn > 0:
-                self.spawn_timer = self.spawn_interval * random.uniform(0.5, 1.5)
+                self.spawn_timer = self.spawn_interval * random.uniform(0.7, 1.3)
             
         # WAVE VICTORY CONDITION: Check if wave is completely cleared
         if self.enemies_to_spawn <= 0 and len(self.enemy_list) == 0:
             if self.current_wave_index < self.total_waves:
-                # Transition to the next wave within the same level
                 self.start_next_wave()
             else:
-                # The entire level is completely cleared
                 self.is_active = False
             
     def spawn_enemy(self) -> bool:
-        """Creates an enemy at a valid, walkable tile checking its full hitbox."""
+        """Creates an enemy at a valid tile, respecting hitboxes and a safe zone around the Totem."""
         
         if not hasattr(self.current_room, 'allowed_enemies') or not self.current_room.allowed_enemies:
             return False 
@@ -125,22 +105,24 @@ class WaveManager:
         except TypeError:
             new_enemy = enemy_class(0, 0)
         
-        # --- HYBRID FIX: LOGICAL GRID + FULL HITBOX COLLISION ---
         if hasattr(self.current_room, 'grid'):
             valid_tiles = []
             solid_rects = self.current_room.get_solid_rects()
-            # Start from row 4 to avoid spawning in the topmost decorative area
+            
             for y in range(4, settings.MAP_HEIGHT):
                 for x in range(settings.MAP_WIDTH):
                     if not self.current_room.grid[y][x]:
                         valid_tiles.append((x, y))
                         
-            # Shuffle the tiles to try random spots across the entire map
             random.shuffle(valid_tiles)
             
-            # Enemy dimensions
             sprite_w = new_enemy.width if hasattr(new_enemy, 'width') and new_enemy.width > 0 else 16
             sprite_h = new_enemy.height if hasattr(new_enemy, 'height') and new_enemy.height > 0 else 16
+            
+            import math
+            totem_cx = self.totem.x + (self.totem.width / 2)
+            totem_cy = self.totem.y + (self.totem.height / 2)
+            valid_spawn = False
             
             for tile_x, tile_y in valid_tiles:
                 px = settings.MAP_RENDER_OFFSET_X + tile_x * settings.TILE_SIZE
@@ -149,11 +131,12 @@ class WaveManager:
                 test_x = px + (settings.TILE_SIZE / 2) - (sprite_w / 2)
                 test_y = py + (settings.TILE_SIZE_Y / 2) - (sprite_h / 2)
                 
-                # --- FIX: FULL BODY HITBOX ---
-                # We use the full sprite_w and sprite_h to perfectly match the EnemyWalkState.
-                # This guarantees the head won't spawn inside a wall block.
-                test_rect = pygame.Rect(test_x, test_y, sprite_w, sprite_h)
+                # SAFE ZONE CHECK: Ensure the enemy does not spawn too close to the Totem
+                dist_to_totem = math.hypot(test_x + (sprite_w / 2) - totem_cx, test_y + (sprite_h / 2) - totem_cy)
+                if dist_to_totem < 100:
+                    continue
                 
+                test_rect = pygame.Rect(test_x, test_y, sprite_w, sprite_h)
                 if test_rect.collidelist(solid_rects) == -1:
                     spawn_x = test_x
                     spawn_y = test_y
@@ -166,7 +149,6 @@ class WaveManager:
             new_enemy.x = spawn_x
             new_enemy.y = spawn_y - 200 
             new_enemy.target = self.totem
-            current_lvl = getattr(self.current_room, 'current_level', 1)
             new_enemy.scale_stats(self.global_level)
             self.enemy_list.append(new_enemy)
             new_enemy.is_spawning = True

@@ -325,7 +325,7 @@ AUDIO_MANAGER.sounds['shoot_enemy'].set_volume(0.5)
 AUDIO_MANAGER.sounds['spawn_card'].set_volume(0.5)
 AUDIO_MANAGER.sounds['hit_totem'].set_volume(0.5)
 AUDIO_MANAGER.sounds['totemfall'].set_volume(0.5)
-AUDIO_MANAGER.sounds['electro_fire'].set_volume(0.5)
+AUDIO_MANAGER.sounds['electro_fire'].set_volume(0.2)
 
 # Register your fonts from the fonts folder, for instance:
 # FONTS = {

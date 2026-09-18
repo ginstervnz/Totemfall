@@ -30,9 +30,9 @@ class VictoryState(BaseState):
             def push_score():
                 try:
                     urllib.request.urlopen(url, timeout=3)
-                    print(f"[*] Puntaje enviado a Dreamlo: {safe_name} - {self.final_score}")
+                    print(f"[*] Save score on Dreamlo: {safe_name} - {self.final_score}")
                 except Exception as e:
-                    print(f"[!] Error al enviar a Dreamlo: {e}")
+                    print(f"[!] Error send score to Dreamlo: {e}")
                     
             threading.Thread(target=push_score).start()
 

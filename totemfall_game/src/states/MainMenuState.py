@@ -114,7 +114,7 @@ class MainMenuState(BaseState):
         version_color = (pulse, pulse, pulse)
 
         # We're putting the version here.
-        version_text = settings.FONTS['small'].render("v0.5.5", True, version_color)
+        version_text = settings.FONTS['small'].render("v0.5.6", True, version_color)
         
         # Anclamos el rectángulo a la esquina inferior derecha (restamos 10px para que respire)
         version_rect = version_text.get_rect(bottomright=(settings.VIRTUAL_WIDTH - 10, settings.VIRTUAL_HEIGHT - 10))

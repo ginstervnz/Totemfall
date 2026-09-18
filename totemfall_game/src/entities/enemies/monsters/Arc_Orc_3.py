@@ -12,7 +12,7 @@ class Arc_Orc_3(BaseEnemy):
         self.height = 16
 
         self.texture_id = 'goblin_3'
-        self.attack_range = 120
+        self.attack_range = 100
         self.projectile_config = {'speed': 120, 'texture': 'arrow', 'frames': [0,1,2,3,4,5]}
         self.animations = {
             'walk': Animation([0, 1, 2,3], 0.2),

@@ -128,3 +128,8 @@ All additions, changes, and fixes for this project will be documented in this fi
 - **Visual Effects Decoupling:** Applied the Single Responsibility Principle (SRP) by moving the `BloodEffect`, `DarkSmokeEffect`, and `LightningEffect` classes from the main controller to an independent module (`Effects.py`), improving code reusability.
 
 - **Structural Refactoring (PlayState):** Massively defragmented the main game state. By delegating the GUI and effects, the "God Object" anti-pattern was eliminated, drastically reducing lines of code and stabilizing RAM usage.
+
+## [v0.5.6] - Horde balance, enemy stats, and player XP balance.
+
+### Fixed
+- An imbalance in horde generation was fixed, a bug affecting player experience gain was resolved, and the base player balance was fine-tuned.

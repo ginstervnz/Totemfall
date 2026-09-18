@@ -26,7 +26,7 @@ class Totem:
         self.shield_cooldown = 12.0
         self.shield_cooldown_max = 12.0
         self.shield_duration = 0.0
-        self.shield_duration_max = 2.5
+        self.shield_duration_max = 8.5
         self.shield_points = []
 
 
