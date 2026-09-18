@@ -133,3 +133,10 @@ All additions, changes, and fixes for this project will be documented in this fi
 
 ### Fixed
 - An imbalance in horde generation was fixed, a bug affecting player experience gain was resolved, and the base player balance was fine-tuned.
+Added
+
+- Mandatory First-Time Registration (NameInputState): Injected a boolean control flag (force_input) into the name registration architecture. When the game detects a missing PLAYER_NAME in the local JSON, it strictly routes the player to the input state, locks the cursor from selecting "Cancel", and disables the ESC key, effectively preventing anonymous gameplay.
+
+- Windows Executable Build System: Integrated PyInstaller to compile the Python source code and its dependencies into a standalone .exe package, drastically reducing deployment complexity.
+
+- Automated Installer (Inno Setup): Designed an Inno Setup compiler script to bundle the executable, assets, and libraries into a professional Windows Installer (setup.exe), handling shortcut creation and uninstallation protocols natively for the end us

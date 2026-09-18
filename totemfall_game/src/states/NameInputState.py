@@ -6,12 +6,13 @@ import settings
 import random
 
 class NameInputState(BaseState):
-    def enter(self) -> None:
+    def enter(self, force_input: bool = False) -> None:
         self.chars = [65, 65, 65, 65, 65] # ASCII codes for "A A A A A"
         self.cursor_pos = 0 # Which letter we are editing (0 to 4), 5 (Save), 6 (Cancel)
         self.is_transitioning = False
         self.transition_alpha = 0.0
         self.input_timer = 0.0
+        self.force_input = force_input
 
     def update(self, dt: float) -> None:
         Timer.update(dt)
@@ -51,10 +52,16 @@ class NameInputState(BaseState):
         else:
             cursor_surf = None
 
-        # HORIZONTAL SUBMENU RENDERING
-        options = ['Save', 'Cancel']
         option_y = settings.VIRTUAL_HEIGHT - 40
-        positions_x = [settings.VIRTUAL_WIDTH * 0.35, settings.VIRTUAL_WIDTH * 0.65]
+
+        # Depending on the flag, we hide 'Cancel' and center 'Save'.
+        if self.force_input:
+            options = ['Save']
+            positions_x = [settings.VIRTUAL_WIDTH * 0.5]
+        else:
+            # HORIZONTAL SUBMENU RENDERING
+            options = ['Save', 'Cancel']
+            positions_x = [settings.VIRTUAL_WIDTH * 0.35, settings.VIRTUAL_WIDTH * 0.65]
 
         for i, option in enumerate(options):
             # Position 5 is 'Save' (index 0), Position 6 is 'Cancel' (index 1)
@@ -73,7 +80,8 @@ class NameInputState(BaseState):
                 cursor_rect = cursor_surf.get_rect(midleft=(rect.right + 10, rect.centery))
                 surface.blit(cursor_surf, cursor_rect)
 
-        info = font_small.render("ARROWS to edit. ENTER to confirm. ESC to Cancel.", True, (150, 150, 150))
+        info_text = "ARROWS to edit. ENTER to confirm." if self.force_input else "ARROWS to edit. ENTER to confirm. ESC to Cancel."
+        info = font_small.render(info_text, True, (150, 150, 150))
         surface.blit(info, (settings.VIRTUAL_WIDTH // 2 - info.get_width() // 2, settings.VIRTUAL_HEIGHT - 15))
 
         # Alpha Fade Overlay
@@ -95,6 +103,8 @@ class NameInputState(BaseState):
                     settings.AUDIO_MANAGER.play_sfx('hover')
 
                 self.input_timer = 0.15
+
+                max_cursor = 5 if self.force_input else 6
                 
                 if input_id == 'right':
                     self.cursor_pos = min(6, self.cursor_pos + 1)
@@ -112,18 +122,18 @@ class NameInputState(BaseState):
             elif input_id == 'confirm':
                 if hasattr(settings, 'AUDIO_MANAGER'):
                     settings.AUDIO_MANAGER.play_sfx('confirm')
-                self.is_transitioning = True
 
                 # LOGICAL ROUTING: If set to 'Cancel' or the exit key is pressed
-                if self.cursor_pos == 6 or input_id == 'quit':
+                if self.cursor_pos == 6:
+                    self.is_transitioning = True
                     Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('main_menu'))
                     return
                 
                 # LOGICAL ROUTING: If you press ENTER on the letters (0–4) or on 'Save' (5)
-                else:
-                    base_name = "".join([chr(c) for c in self.chars])
-                    pin = random.randint(1000, 9999)
-                    final_name = f"{base_name}-{pin}"
+                self.is_transitioning = True
+                base_name = "".join([chr(c) for c in self.chars])
+                pin = random.randint(1000, 9999)
+                final_name = f"{base_name}-{pin}"
 
                 try:
                     print(f"[*] Intentando guardar el nombre: {final_name}...")
@@ -140,3 +150,8 @@ class NameInputState(BaseState):
                     
                 # Pase lo que pase arriba, forzamos la transición al menú
                 Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('main_menu'))
+
+            elif input_id == 'quit':
+                if not self.force_input:
+                    self.is_transitioning = True
+                    Timer.tween(1.0, [(self, {'transition_alpha': 255.0})], on_finish=lambda: self.state_machine.change('main_menu'))

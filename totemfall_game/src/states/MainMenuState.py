@@ -7,7 +7,7 @@ from gale.timer import Timer
 import settings
 
 class MainMenuState(BaseState):
-    def enter(self) -> None:
+    def enter(self, force_input= False, **kwargs) -> None:
         self.transition_alpha = 0.0
         self.is_transitioning = False
 
@@ -18,6 +18,7 @@ class MainMenuState(BaseState):
         # Timer for our pulse effect
         self.time_alive = 0.0
         self.input_timer = 0.0
+        self.force_input = force_input
 
         if hasattr(settings, 'AUDIO_MANAGER'):
             settings.AUDIO_MANAGER.fade_out_and_play('assets/sounds/level_music/menu_sound.mp3')

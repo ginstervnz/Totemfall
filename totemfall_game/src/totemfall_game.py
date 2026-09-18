@@ -48,7 +48,7 @@ class TotemfallGame(Game, InputListener):
         # We verify whether the save file loaded a valid name.
         if settings.PLAYER_NAME is None:
             # It's his first time playing. We sent him to register.
-            self.state_machine.change('name')
+            self.state_machine.change('name', force_input=True)
         else:
             # He is already a known player. We're sending him straight to the menu.
             self.state_machine.change('main_menu')

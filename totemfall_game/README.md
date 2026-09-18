@@ -33,3 +33,8 @@ Totemfall is designed with an intuitive, mouse-driven combat system:
 * **Pygame:** Used for rendering graphics, handling window events, playing audio, and calculating basic geometry.
 * **Gale Framework:** A lightweight game architecture framework used to handle State Machines (managing transitions between menus, gameplay, and game-over screens), particle systems, tweening animations, and input handling.
 * **Dreamlo API:** Integrated for live, global high-score tracking in Infinite Mode.
+
+## Installer
+
+The following link is for Windows users: https://drive.google.com/file/d/1p6Wy7_1Fl1oLYp8K9jnCHVVdda9ieoIx/view?usp=sharing
+Mac and/or Linux users must clone or download the repository and ensure all required dependencies are installed.
