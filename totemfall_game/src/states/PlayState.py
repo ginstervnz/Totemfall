@@ -81,7 +81,6 @@ class LightningEffect:
 
     def render(self, surface: pygame.Surface) -> None:
         if self.active:
-            import pygame
             # Draw an intense cyan outer glow (width 3) and a white core (width 1)
             pygame.draw.lines(surface, (0, 255, 255), False, self.points, 3)
             pygame.draw.lines(surface, (255, 255, 255), False, self.points, 1)
@@ -971,5 +970,5 @@ class PlayState(BaseState):
                     self.score += 100
                 else:
                     self.score += (10 * self.current_level)
-                xp_reward = random.randint(1000, 2000) * self.current_level
+                xp_reward = random.randint(10, 100) * self.current_level
                 self.exp_orbs.append(ExpOrb(target_enemy.x, target_enemy.y, xp_reward))

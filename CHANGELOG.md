@@ -1,110 +1,130 @@
 # Changelog - Totemfall
 
-Todas las adiciones, cambios y correcciones de este proyecto serán documentadas en este archivo.
+All additions, changes, and fixes for this project will be documented in this file.
 
-## [v0.1.0] - Estructura Base y Movimiento del Jugador
+## [v0.1.0] - Base Structure and Player Movement
 
-### Añadido
-- **Entorno Virtual y Framework:** Configuración inicial del proyecto utilizando Pygame y el framework Gale.
-- **Máquina de Estados (Game States):** Implementación de la arquitectura de estados principales (`MainMenuState`, `PlayState`, `OptionsState`) para un flujo de juego limpio.
-- **Entidad Player Independiente:** Creación de la clase `Player` utilizando su propia máquina de estados (`PlayerIdleState`, `PlayerWalkState`).
-- **Sistema de Animación:** Integración de `gale.animation` para reproducir fluidamente los *sprites* del mago (idle y walk) basándose en una cuadrícula exacta de 26x18 píxeles.
-- **Renderizado del Nivel:** Implementación de la plataforma de defensa (`sprStairs.png`) en la parte superior del `PlayState`, reservando espacio (HUD) para la futura interfaz.
-- **Cursor Táctico:** Se ocultó el cursor nativo de Windows y se reemplazó por un *crosshair* personalizado (`sprCursor.png`) que sigue el mouse en coordenadas virtuales escaladas.
-- **Matemática de Disparo (Fundamentos):** Incorporación de la lógica trigonométrica (`math.atan2`) que calcula el ángulo exacto entre el centro del jugador y el cursor del mouse, preparando el terreno para el sistema de *Object Pooling* de proyectiles.
+### Added
+- **Virtual Environment and Framework:** Initial project setup using Pygame and the Gale framework.
+- **State Machine (Game States):** Implementation of core state architecture (`MainMenuState`, `PlayState`, `OptionsState`) for a clean game flow.
+- **Independent Player Entity:** Creation of the `Player` class using its own state machine (`PlayerIdleState`, `PlayerWalkState`).
+- **Animation System:** Integration of `gale.animation` to smoothly play wizard sprites (idle and walk) based on a precise 26x18 pixel grid.
+- **Level Rendering:** Implementation of the defense platform (`sprStairs.png`) at the top of `PlayState`, reserving space (HUD) for the future interface.
+- **Tactical Cursor:** Hidden the native Windows cursor and replaced it with a custom crosshair (`sprCursor.png`) that follows the mouse using scaled virtual coordinates.
+- **Shooting Math (Fundamentals):** Incorporation of trigonometric logic (`math.atan2`) to calculate the exact angle between the player's center and the mouse cursor, laying the groundwork for the projectile *Object Pooling* system.
 
-### Cambiado
-- **Controles del Sistema:** Se eliminó la salida accidental del juego con `ESC`. Ahora se requiere presionar la combinación `Ctrl + Q` para cerrar la aplicación de forma segura.
+### Changed
+- **System Controls:** Removed accidental game exit via the `ESC` key. Pressing the `Ctrl + Q` key combination is now required to safely close the application.
 
-## [v0.2.0] - Sistema de Combate, IA y Game Feel
+## [v0.2.0] - Combat System, AI, and Game Feel
 
-### Añadido
-- **Sistema de Colisiones (Hitboxes):** Implementación de lógica física entre entidades (enemigos, proyectiles y estructuras) para el registro de impactos.
-- **Efectos de Partículas (Sangre):** Integración del sistema `ParticleSystem` del framework Gale para emitir salpicaduras de sangre direccionales al registrar daño en los enemigos.
-- **Retroalimentación Visual (Game Feel):** Adición de destellos blancos al recibir daño usando saturación de color (`BLEND_RGB_ADD`) y transiciones de estado en proyectiles para reproducir animaciones de explosión al impactar.
-- **IA Cuerpo a Cuerpo (Batilisk):** Creación de la entidad `Batilisk` con lógica de persecución matemática (*Pathfinding*), un estado dedicado de ataque (`EnemyAttackState`) y un efecto visual de tajo de espada que calcula y rota dinámicamente hacia el objetivo.
-- **IA a Distancia (Goblin):** Creación de la entidad arquera `Goblin` con su propio *Object Pool* de flechas independientes.
-- **Lógica de Rango y Movimiento (Strafing):** Implementación de `EnemyRangedWalkState` para calcular distancias euclidianas (rango de visión), y `EnemyRangedAttackState` con comportamiento de pasos laterales y pausas tácticas para tensar el arco, evitando que el enemigo sea un blanco estático.
+### Added
+- **Collision System (Hitboxes):** Implementation of physics logic between entities (enemies, projectiles, and structures) to register hits.
+- **Particle Effects (Blood):** Integration of the Gale framework's `ParticleSystem` to emit directional blood splatters when damage is registered on enemies.
+- **Visual Feedback (Game Feel):** Addition of white flashes upon taking damage using color saturation (`BLEND_RGB_ADD`) and state transitions in projectiles to trigger explosion animations on impact.
+- **Melee AI (Batilisk):** Creation of the `Batilisk` entity featuring mathematical pursuit logic (pathfinding), a dedicated attack state (`EnemyAttackState`), and a sword-slash visual effect that dynamically calculates and rotates toward the target.
+- **Ranged AI (Goblin):** Creation of the `Goblin` archer entity with its own independent arrow *Object Pool*.
+- **Range and Movement Logic (Strafing):** Implementation of `EnemyRangedWalkState` to calculate Euclidean distances (vision range), and `EnemyRangedAttackState` featuring strafing behavior and tactical pauses for drawing the bow, preventing the enemy from being a static target.
 
-##  Generación Procedural, Multimundos y Físicas
+## Procedural Generation, Multi-worlds, and Physics
 
-### Añadido
-- **Arquitectura Procedural Base:** Creación de la clase padre `ProceduralRoom` encargada de generar la estructura de los niveles.
-- **Algoritmos de Mapas:** Implementación de *Path Carving* (garantizando rutas de escape), Autómatas Celulares (suavizado para rellenar huecos trampa) y Clustering (agrupación orgánica de bloques).
-- **Despeje de Arena (Arena Clearing):** Lógica matemática para mantener el centro del mapa y las esquinas despejadas, favoreciendo el espacio para el combate.
-- **Sistema de Multimundos:** Creación de 5 entornos distintos (`SwampRoom`, `InfernoRoom`, `CatacombsRoom`, `RockRoom`, `WaterRoom`) aplicando herencia orientada a objetos (DRY) para heredar la lógica procedural pero inyectar texturas únicas.
-- **Progresión Modular:** Implementación de un gestor de niveles en `PlayState` que aumenta la densidad de obstáculos del nivel 1 al 8, y cambia de mundo automáticamente utilizando el operador módulo (`%`).
-- **Físicas Dinámicas de Proyectiles:** Se añadió el método `get_collision_rect()` a los proyectiles para calcular hitboxes dinámicas en tiempo real que respetan su rotación y su patrón de onda (`wobble`).
-- **Detección de Colisiones AABB:** Los proyectiles mágicos ahora detectan correctamente los bloques sólidos y se desactivan (destruyen) al impactar contra los muros de la arena.
-- **Temporizador Antirrebote (Debounce):** Inclusión de un *cooldown* en la lectura de inputs del teclado para evitar que un solo toque registre múltiples pulsaciones (Key Bouncing) al cambiar de nivel.
+### Added
+- **Base Procedural Architecture:** Created the `ProceduralRoom` parent class responsible for generating level structures.
+- **Map Algorithms:** Implemented *Path Carving* (ensuring escape routes), Cellular Automata (smoothing to fill in trap-like gaps), and Clustering (organic block grouping).
+- **Arena Clearing:** Mathematical logic to keep the map center and corners clear, prioritizing space for combat.
+- **Multi-world System:** Created 5 distinct environments (`SwampRoom`, `InfernoRoom`, `CatacombsRoom`, `RockRoom`, `WaterRoom`) using object-oriented inheritance (DRY principle) to inherit procedural logic while injecting unique textures.
+- **Modular Progression:** Implemented a level manager in `PlayState` that increases obstacle density from level 1 to 8 and automatically switches worlds using the modulo operator (`%`).
+- **Dynamic Projectile Physics:** Added the `get_collision_rect()` method to projectiles to calculate real-time dynamic hitboxes that account for rotation and wave patterns ("wobble").
+- **AABB Collision Detection:** Magic projectiles now correctly detect solid blocks and deactivate (destroy themselves) upon impact with arena walls.
+- **Debounce Timer:** Included an input cooldown to prevent single touches from registering multiple keystrokes (key bouncing) during level transitions.
 
-### Cambiado
-- **Refactorización y Optimización:** Se optimizó la complejidad de la generación de la matriz espacial de los mapas fusionando bucles anidados y utilizando *Set Comprehensions* (operaciones nativas rápidas en Python).
-- **Ajuste de Padding Visual:** Modificación matemática de `TILE_SIZE_Y` en las configuraciones globales para aplastar los *sprites* y eliminar los huecos transparentes, logrando muros visualmente sólidos y conectados.
+### Changed
+- **Refactoring and Optimization:** Optimized the complexity of map spatial matrix generation by merging nested loops and utilizing *Set Comprehensions* (fast, native Python operations). - **Visual Padding Adjustment:** Mathematical modification of `TILE_SIZE_Y` in the global settings to squash the sprites and eliminate transparent gaps, resulting in visually solid, connected walls.
 
-## [v0.3.0] - Agregado de enemigos, vida del totem Y primeras Oleadas
+## [v0.3.0] - Enemy Spawning, Totem Health, and Initial Waves
 
-### Añadido
-- **Arquitectura Procedural para la generacion de enemigos:** Cracion de la clase `WaveManager.py` que gestiona la generacion de los enemigos en el nivel.
-- **Algoritmos de Mapas con enemigos:** Implementación de tipos especificos de enemigos por tipo de mundo.
-- **Agregado de los tipos de enmigos:** Implementacion de los diferentes mounstros que va a tener el juego.
-
-
-## [v0.4.0] - Cinemáticas, Físicas Avanzadas y Estadísticas (Kill Tracker)
-
-### Añadido
-- **Cinemáticas de Nivel:** Implementación de secuencias de victoria (ascenso al cielo) y entrada triunfal (aterrizaje al nuevo nivel) utilizando el motor de interpolación matemática (`Timer.tween`).
-- **Efecto de Transición (Iris Wipe):** Sistema visual de cierre y apertura circular entre escenas construido con el lienzo de Pygame utilizando enmascaramiento por color clave (`set_colorkey`).
-- **Cinemática de Derrota (Time Freeze):** Implementación del patrón de "Congelamiento de Tiempo" que detiene la lógica del motor para ejecutar una explosión de partículas y el hundimiento del Tótem antes del cambio de estado.
-- **Sistema de Estadísticas (Kill Tracker):** Recolección dinámica de bajas en un diccionario (`kill_counts`) que identifica el tipo de monstruo derrotado mediante su atributo `texture_id`.
-- **UI en Cuadrícula Dinámica (Grid Layout):** Rediseño matemático del `GameOverState` para organizar el reporte de bajas en una cuadrícula auto-centrada de hasta 7 columnas, capaz de escalar y mostrar múltiples sprites y multiplicadores de texto ("x N") sin solapamientos.
-
-### Cambiado
-- **Sistema de Seguro de Arma (Weapon Safety):** Implementación de una bandera de comunicación (`can_shoot`) entre el `PlayState` y el `Player` para suspender el gasto de maná, bloqueando los disparos durante las cinemáticas o en ausencia de enemigos.
-- **Renderizado y Vida de Partículas:** 
-
-### Corregido
-- **Deslizamiento de Muros (Wall Sliding):** Se rediseñó el motor físico `_move_with_collisions` en `BaseEnemy` aplicando Conservación de Inercia. Los enemigos ahora transfieren el 100% de su aceleración al eje libre, erradicando la pérdida artificial de velocidad (fricción de pared).
-- **Vibración de Enemigos (Target Jittering):** Se incorporó un "Radio de Ataque" (Stopping Distance de 15 píxeles) en el algoritmo de supervivencia (Plan B). Los monstruos cuerpo a cuerpo ahora frenan en seco al rodear el Tótem, eliminando el temblor de colisión AABB.
-- **Limpieza Instantánea de Proyectiles:** Se solucionó el problema de *fuego fantasma* desintegrando forzosamente cualquier misil vivo en pantalla en el milisegundo exacto en que inicia una cinemática.
-- **Agregado tipos de cartas:** Implementacion de los diferentes tipos de cartas que daran poderes al jugador.
-
-## Sistema de Invocación, UI "Juice" y Efectos Visuales
-
-### Añadido
-- **Efectos de Interfaz (Juice) para Cartas:** Implementación de animaciones de entrada (`tweening`), escalado dinámico al pasar el cursor con marco dorado, partículas mágicas integradas y auto-ajuste inteligente de texto.
-- **Manipulación del Tiempo (Slow-Mo):** Agregado un efecto de dilatación temporal que ralentiza la acción al elegir una mejora y recupera la velocidad gradualmente al reanudar el combate.
-- **Vórtices de Experiencia Animados:** Creacion de los orbes de exp usando texturas animadas utilizando el sistema de animaciones del framework.
-- **Sistema de Invocación de Aliados:** Creación de la clase proxy `Ally.py`, capaz de clonar cualquier enemigo del nivel actual, sobrescribiendo su IA para que defienda al jugador (marcado con un diamante azul).
-- **Mazo de Cartas Evolutivo:** El gestor de cartas ahora inyecta opciones avanzadas (daño extra para aliados y ranuras de invocación adicionales) únicamente después de que el jugador desbloquea la habilidad base.
-- **Formaciones Defensivas Tácticas:** Los monstruos aliados transicionan a un "Modo Guardián", marchando hacia posiciones de escolta predefinidas frente al obelisco cuando se limpia la oleada.
-- **Sistema de Aggro Dinámico e Intercepción:** Los enemigos evalúan la distancia en tiempo real para priorizar el combate contra los aliados más cercanos en lugar del obelisco. Los proyectiles enemigos ahora también impactan y dañan a las invocaciones.
-- **Animaciones de Aparición (Spawn Drop):** Tanto enemigos como aliados ingresan al campo de batalla cayendo desde el cielo con un efecto de rebote, detonando un nuevo sistema de partículas de impacto (`DustEffect.py`) al tocar el suelo.
+### Added
+- **Procedural Enemy Spawning Architecture:** Created the `WaveManager.py` class to manage enemy spawning within the level.
+- **Enemy Map Algorithms:** Implemented specific enemy types based on the world type.
+- **Enemy Type Integration:** Implemented the various monster types featured in the game.
 
 
-## [v0.5.0] - Persistencia, Top Global y Modo Infinito
+## [v0.4.0] - Cutscenes, Advanced Physics, and Statistics (Kill Tracker)
 
-### Añadido
-- **Persistencia de Datos Local:** Implementación del módulo `json` en las configuraciones globales para escribir y leer un archivo `save_data.json` que almacena el nombre del jugador en el disco duro.
-- **Registro de Jugador Estilo Arcade:** Creación del `NameInputState`, una interfaz que permite al usuario registrar un nombre de 5 letras utilizando la navegación por teclado (flechas y Enter), emulando las máquinas recreativas clásicas.
-- **Integración de Top Global (Dreamlo):** Conexión HTTP nativa con la API de Dreamlo para el envío y lectura de puntajes. El proceso se ejecuta en un hilo secundario (`threading`) durante el `GameOverState` y `VictoryState` para evitar bloqueos en el renderizado (congelamiento de fotogramas).
-- **Fondo Dinámico en el Menú Principal:** Integración de una imagen de fondo (`menu_bg`) que se escala automáticamente a la resolución virtual del juego. Se implementó un filtro oscuro semitransparente (`SRCALPHA` a 100 de opacidad) superpuesto al fondo para garantizar la legibilidad y contraste del texto del menú.
-- **Modo Supervivencia (Infinito/Aleatorio):** Nueva característica post-victoria ("Keep Playing") que inyecta una bandera (`random_mode`) al `PlayState`. Esto altera la generación para cargar mundos aleatorios (del 1 al 40), estandariza la ganancia de puntos (100 pts fijos por baja) y cambia el identificador del HUD a "Level: INF", manteniendo intacto el progreso previo del jugador.
-- **Submenús Horizontales:** Rediseño arquitectónico en las pantallas de fin de juego para soportar opciones en el eje X, calculando dinámicamente las posiciones al 35% y 70% del ancho de la pantalla y mapeando las teclas `Left`/`Right`.
-- **Personalización del Sistema Operativo:** Integración de la función nativa `pygame.display.set_icon()` para inyectar dinámicamente un *sprite* del juego (el mago) como ícono en la ventana del sistema, además de la parametrización del título de la aplicación.
+### Added
+- **Level Cutscenes:** Implemented victory sequences (ascension to the sky) and triumphant entries (landing in the new level) using the mathematical interpolation engine (`Timer.tween`).
+- **Transition Effect (Iris Wipe):** A visual circular closing and opening system between scenes, built using the Pygame surface and color-key masking (`set_colorkey`).
+- **Defeat Cutscene (Time Freeze):** Implemented a "Time Freeze" pattern that halts engine logic to execute a particle explosion and the sinking of the Totem before the state change.
+- **Statistics System (Kill Tracker):** Dynamic kill tracking using a dictionary (`kill_counts`) that identifies defeated monster types via their `texture_id` attribute.
+- **Dynamic Grid UI (Grid Layout):** Mathematically redesigned the `GameOverState` to organize the kill report into a self-centering grid (up to 7 columns), capable of scaling and displaying multiple sprites and text multipliers ("x N") without overlapping.
 
-### Cambiado
-- **Expansión del Menú Principal:** Se reestructuró la lista de opciones y el enrutamiento del `MainMenuState`. Ahora el jugador puede navegar entre cuatro opciones completas: *Play* (inicia la partida), *Global Top* (conecta con la API de Dreamlo), *Change Name* (modifica el archivo `.json` de persistencia) y *Exit* (cierra el juego de forma segura).
-- **Estandarización de Navegación:** Se corrigió la dirección matemática del cursor en el `MainMenuState` para ajustarse a los estándares de UX.
-## [v0.5.0] - Cinemáticas Avanzadas, Entornos Dinámicos y Pulido Sonoro
+### Changed
+- **Weapon Safety System:** Implemented a communication flag (`can_shoot`) between `PlayState` and `Player` to suspend mana consumption, blocking shots during cutscenes or when no enemies are present. - **Rendering and Particle Lifespan:**
 
-### Añadido
-- **Cinemática de Introducción (`IntroCinematicState`):** Creación de un estado completamente nuevo orquestado con `gale.timer` y animaciones de `gale.animation`. Presenta una turba masiva de monstruos escalados y descentralizados persiguiendo al jugador, con partículas de polvo dinámicas y una transición por corte al juego.
-- **Muros Masivos Invisibles (World Bounds):** Inyección procedural de cuatro bloques colosales e invisibles (500px de grosor) alrededor de la cuadrícula de juego. Previene de forma definitiva el *softlock* de entidades generadas o empujadas fuera del área de renderizado por el motor de colisiones.
-- **Sistema Híbrido de Generación Segura (Spawn Safety):** El algoritmo `WaveManager` ahora combina restricciones lógicas de la matriz con colisiones físicas AABB completas, asegurando que enemigos voluminosos no solapen su hitbox con las texturas de la pared.
-- **Mecánica de Demolición (Destrucción de Bloques):** Implementación de la carta `BlocksCard` y retroalimentación acústica. El jugador ahora puede disparar y destruir dinámicamente muros generados proceduralmente (respetando los bordes perimetrales), alterando las rutas de la IA en tiempo real.
-- **Orquestación de Audio Fluida:** Ajustes en el `settings.AUDIO_MANAGER` para detener y hacer fundidos cruzados (fade out) asíncronos tanto del nuevo efecto sonoro de persecución (`chase.ogg`) como del derrumbe del obelisco (`totemfall.ogg`) en sus respectivos cambios de estado.
+### Fixed
+- **Wall Sliding:** Redesigned the `_move_with_collisions` physics engine in `BaseEnemy` by applying momentum conservation. Enemies now transfer 100% of their acceleration to the free axis, eliminating artificial speed loss (wall friction).
+- **Target Jittering:** Incorporated an "Attack Radius" (15-pixel stopping distance) into the survival algorithm (Plan B). Melee monsters now come to a dead stop when surrounding the Totem, eliminating AABB collision jitter.
+- **Instant Projectile Cleanup:** Resolved the "ghost fire" issue by forcibly destroying any active on-screen missiles the exact millisecond a cutscene begins.
+- **Card Types Added:** Implemented various card types that grant powers to the player.
 
-### Cambiado
-- **Ampliación del Límite Letal (Insta-Kill Failsafe):** Se ajustó matemáticamente el margen de tolerancia del *failsafe* (+32px), evitando la eliminación accidental de los modelos de monstruos más grandes mientras intentan rodear los límites del mapa.
-- **Progresión Dinámica de Estadísticas:** Integración total de la función `scale_stats` dentro de la rutina de nacimiento de la horda en `WaveManager`, escalando la salud y velocidad de cada unidad en tiempo real según el nivel global.
+## Summoning System, UI "Juice," and Visual Effects
+
+### Added
+- **Card UI Effects ("Juice"):** Implemented entry animations (tweening), dynamic scaling with a gold border on hover, integrated magic particles, and intelligent auto-adjusting text.
+- **Time Manipulation (Slow-Mo):** Added a time-dilation effect that slows down the action when selecting an upgrade and gradually restores speed upon resuming combat.
+- **Animated XP Vortices:** Created XP orbs using animated textures via the framework's animation system.
+- **Ally Summoning System:** Created the `Ally.py` proxy class, capable of cloning any enemy from the current level and overriding its AI to defend the player (marked with a blue diamond). - **Evolving Card Deck:** The card manager now applies advanced options (bonus damage for allies and extra summon slots) only after the player unlocks the base ability.
+- **Tactical Defensive Formations:** Allied monsters switch to "Guardian Mode," moving to pre-set escort positions in front of the obelisk once the wave is cleared.
+- **Dynamic Aggro and Interception System:** Enemies assess distance in real-time to prioritize engaging the nearest allies rather than the obelisk. Enemy projectiles now also hit and damage summons.
+- **Spawn Drop Animations:** Both enemies and allies enter the battlefield by dropping from the sky with a bounce effect, triggering a new impact particle system (`DustEffect.py`) upon hitting the ground.
+
+
+## [v0.5.0] - Persistence, Global Leaderboard, and Infinite Mode
+
+### Added
+- **Local Data Persistence:** Implementation of the `json` module within global configurations to read and write a `save_data.json` file, storing the player's name on the hard drive.
+- **Arcade-Style Player Registration:** Creation of `NameInputState`, an interface allowing users to enter a 5-letter name using keyboard navigation (arrow keys and Enter), emulating classic arcade machines.
+- **Global Leaderboard Integration (Dreamlo):** Native HTTP connection to the Dreamlo API for submitting and retrieving scores. The process runs on a background thread (`threading`) during `GameOverState` and `VictoryState` to prevent rendering blocks (frame freezing).
+- **Dynamic Main Menu Background:** Integration of a background image (`menu_bg`) that automatically scales to the game's virtual resolution. A semi-transparent dark overlay (`SRCALPHA` with 100 opacity) was applied over the background to ensure menu text readability and contrast.
+- **Survival Mode (Infinite/Random):** A new post-victory feature ("Keep Playing") that injects a flag (`random_mode`) into `PlayState`. This alters level generation to load random worlds (1 through 40), standardizes point gains (fixed 100 pts per kill), and changes the HUD indicator to "Level: INF," while preserving the player's previous progress.
+- **Horizontal Submenus:** Architectural redesign of end-game screens to support X-axis options; positions are dynamically calculated at 35% and 70% of the screen width, with `Left`/`Right` key mapping implemented. - **Operating System Customization:** Integration of the native `pygame.display.set_icon()` function to dynamically inject a game sprite (the wizard) as the system window icon, alongside parameterization of the application title.
+
+### Changed
+- **Main Menu Expansion:** Restructured the option list and routing for `MainMenuState`. Players can now navigate between four full options: *Play* (starts the game), *Global Top* (connects to the Dreamlo API), *Change Name* (modifies the persistence `.json` file), and *Exit* (safely closes the game).
+- **Navigation Standardization:** Corrected the mathematical direction of the cursor in `MainMenuState` to align with UX standards.
+
+## Advanced Cinematics, Dynamic Environments, and Audio Polish
+
+### Added
+- **Introductory Cinematic (`IntroCinematicState`):** Created a brand-new state orchestrated using `gale.timer` and `gale.animation`. It features a massive horde of scaled, offset monsters chasing the player, complete with dynamic dust particles and a hard cut transition to gameplay.
+- **Massive Invisible Walls (World Bounds):** Procedural injection of four colossal, invisible blocks (500px thick) surrounding the game grid. This definitively prevents "soft-locking" caused by entities being spawned or pushed outside the render area by the collision engine.
+- **Hybrid Safe-Spawn System:** The `WaveManager` algorithm now combines logical grid constraints with full AABB physical collision checks, ensuring that bulky enemies do not have their hitboxes overlap with wall textures.
+- **Demolition Mechanic (Block Destruction):** Implemented the `BlocksCard` and associated audio feedback. Players can now dynamically shoot and destroy procedurally generated walls (while respecting perimeter boundaries), altering AI pathfinding in real-time.
+- **Seamless Audio Orchestration:** Adjusted `settings.AUDIO_MANAGER` to handle asynchronous stopping and cross-fading (fade-out) for both the new chase sound effect (`chase.ogg`) and the obelisk collapse (`totemfall.ogg`) during their respective state transitions.
+
+### Changed
+- **Lethal Boundary Extension (Insta-Kill Failsafe):** Mathematically adjusted the failsafe tolerance margin (+32px) to prevent the accidental deletion of larger monster models as they attempt to navigate around the map boundaries. - **Dynamic Stat Scaling:** Full integration of the `scale_stats` function into the `WaveManager` horde spawning routine, scaling each unit's health and speed in real-time based on the global level.
+
+## [v0.5.5] - Horde Acceleration, Electric Mechanics, and Shield System
+
+### Added
+- **Art Credits Screen (`CreditsState`):** Implementation of a new vertically scrolling text interface, accessible from the main menu. Designed to formally credit asset creators (Reaktori, Batareya, and Atelier Pixerelia), it manages dynamic spacing based on line count and uses top-center anchoring (`midtop`) to prevent text clipping at low resolutions.
+- **Gradual Crowd Control Limiter:** A dynamic mathematical barrier was added to the wave manager; it temporarily halts enemy spawning if the player fails to clear the screen quickly enough. In early levels, this enforces controlled, gradual combat, but the limit expands exponentially at higher levels, allowing for massive assaults.
+- **Dynamic Horde Burst Spawning:** Replaced the traditional rhythmic timer with a stochastic spawning system. The engine now summons random clusters (*bursts*) of simultaneous monsters and varies the timing interval between 50% and 150%, creating organic, unpredictable pressure at high levels.
+- **Chain Volt Mechanic:** Introduction of a new card evolution path. It grants the player charged projectiles that, upon detonation, perform a Euclidean scan of surrounding enemies and propagate branching damage.
+- **Procedural Electricity VFX:** Development of the `LightningEffect` system. It utilizes pure rendering via Pygame primitives (`pygame.draw.lines`) to generate irregular, dynamic, high-voltage electric arcs, connecting impact vectors without using pre-rendered sprites or consuming texture memory. - **Temporary Shield Mechanic (Aegis):** Integration of an ultimate card that grants the obelisk a cyclical immunity property. It generates a procedural, unstable energy shield calculated parametrically from the center of the Totem.
+- **Forced Immunity Reset:** Implementation of a strict reset (`reset_shield`) upon leveling up to ensure the *Aegis* ability's cyclical timer is neither carried over nor manipulated during transition cutscenes.
+
+### Changed
+- **Mathematical Global Scaling:** Restructured the budget formula in `WaveManager`. The total enemy count is now calculated based on absolute game progress (`global_level`) rather than resetting per world cycle (`internal_level`), making invasions at level 20+ monumentally overwhelming.
+- **Menu Visual Refinement:** Replaced `pygame.transform.scale` with `pygame.transform.smoothscale` for the main menu background (`menu_bg`). A bilinear interpolation filter was applied to preserve smoothness, the original orb glow, and the artwork's high definition when downscaling to the engine's native resolution (480x270 pixels).
+
+### - Architectural Optimization, Smart Caching, and Mana Economy
+- **Added** Level Restoration: Modified the `advance_level` method in the main orchestrator to automatically restore 100% of the player's mana when transitioning to a new wave or world.
+
+### Changed
+- **Interface Architecture (Smart Caching):** Fully extracted static rendering logic into a new delegate class, `HUD.py`. Implemented a design pattern using `@classmethod` and cache variables to pre-scale textures (`pygame.transform.scale`) and rasterize fonts (`font.render`) once in memory.
+
+- **Visual Effects Decoupling:** Applied the Single Responsibility Principle (SRP) by moving the `BloodEffect`, `DarkSmokeEffect`, and `LightningEffect` classes from the main controller to an independent module (`Effects.py`), improving code reusability.
+
+- **Structural Refactoring (PlayState):** Massively defragmented the main game state. By delegating the GUI and effects, the "God Object" anti-pattern was eliminated, drastically reducing lines of code and stabilizing RAM usage.
