@@ -448,32 +448,36 @@ class PlayState(BaseState):
                 self.enemies.pop(i)
                 settings.AUDIO_MANAGER.play_sfx('dead_enemy')
                 continue
-            enemy.solid_rects = solid_rects
-            enemy.pathfinder = self.pathfinder
-            enemy.update(scaled_dt)
+            if not getattr(enemy, 'is_spawning', False):
+                enemy.solid_rects = solid_rects
+                enemy.pathfinder = self.pathfinder
+                enemy.update(scaled_dt)
 
-            if getattr(enemy, 'block_to_break', None) is not None:
-                col, row = enemy.block_to_break
-                self.current_room.break_block_at(col, row)
-                enemy.block_to_break = None # Clean up the signal
+                if getattr(enemy, 'block_to_break', None) is not None:
+                    col, row = enemy.block_to_break
+                    self.current_room.break_block_at(col, row)
+                    enemy.block_to_break = None # Clean up the signal
 
-                # Calculate block position to generate dust/debris
-                px = settings.MAP_RENDER_OFFSET_X + col * settings.TILE_SIZE + (settings.TILE_SIZE // 2)
-                py = settings.MAP_RENDER_OFFSET_Y + row * settings.TILE_SIZE_Y + (settings.TILE_SIZE_Y // 2)
-                self.particle_systems.append(BloodEffect(px, py))
-              
-            best_target = self.totem
-            # Check if this enemy was provoked by an ally
-            if hasattr(enemy, 'aggro_target') and enemy.aggro_target is not None:
-                if not getattr(enemy.aggro_target, 'is_dead', False):
-                    # Ally is alive, seek revenge!
-                    best_target = enemy.aggro_target
-                else:
-                    # The ally died, forgive and return to attacking the Totem
-                    enemy.aggro_target = None
-            enemy.target = best_target
-            
-            enemy.solid_rects = solid_rects 
+                    # Calculate block position to generate dust/debris
+                    px = settings.MAP_RENDER_OFFSET_X + col * settings.TILE_SIZE + (settings.TILE_SIZE // 2)
+                    py = settings.MAP_RENDER_OFFSET_Y + row * settings.TILE_SIZE_Y + (settings.TILE_SIZE_Y // 2)
+                    self.particle_systems.append(BloodEffect(px, py))
+                  
+                best_target = self.totem
+                # Check if this enemy was provoked by an ally
+                if hasattr(enemy, 'aggro_target') and enemy.aggro_target is not None:
+                    if not getattr(enemy.aggro_target, 'is_dead', False):
+                        # Ally is alive, seek revenge!
+                        best_target = enemy.aggro_target
+                    else:
+                        # The ally died, forgive and return to attacking the Totem
+                        enemy.aggro_target = None
+                enemy.target = best_target
+                enemy.solid_rects = solid_rects 
+            else:
+                # While dropping from the sky, advance animation only
+                if hasattr(enemy, 'current_animation') and enemy.current_animation:
+                    enemy.current_animation.update(scaled_dt)
 
             
             enemy_rect = pygame.Rect(enemy.x, enemy.y, enemy.width, enemy.height)
@@ -518,7 +522,7 @@ class PlayState(BaseState):
 
 
             # Ranged enemy attack logic
-            if getattr(enemy, 'just_fired', False):
+            if not getattr(enemy, 'is_spawning', False) and getattr(enemy, 'just_fired', False):
                 enemy.just_fired = False 
                 for p in self.enemy_projectiles:
                     if not p.active:
@@ -605,7 +609,11 @@ class PlayState(BaseState):
         # Update cooldown timers for dead allies
         for i in range(len(self.allies) - 1, -1, -1):
             ally = self.allies[i]
-            ally.update(scaled_dt, self.enemies, self.totem, self.allies, solid_rects)
+            if not getattr(ally.visuals, 'is_spawning', False):
+                ally.update(scaled_dt, self.enemies, self.totem, self.allies, solid_rects)
+            else:
+                if hasattr(ally.visuals, 'current_animation') and ally.visuals.current_animation:
+                    ally.visuals.current_animation.update(scaled_dt)
             
             if ally.is_dead:
                 self.ally_cooldowns.append(15.0) 

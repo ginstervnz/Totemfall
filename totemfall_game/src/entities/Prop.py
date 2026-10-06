@@ -11,7 +11,7 @@ class Prop:
         
         # It is assumed that the props have the same dimensions as a map block.
         self.width = settings.TILE_SIZE
-        self.height = settings.TILE_SIZE
+        self.height = settings.TILE_SIZE_Y
 
     def get_collision_rect(self) -> pygame.Rect:
         return pygame.Rect(self.x, self.y, self.width, self.height)

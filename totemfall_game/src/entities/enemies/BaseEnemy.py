@@ -64,12 +64,18 @@ class BaseEnemy:
                 collided_x = True
                 wall = self.solid_rects[idx]
                 if move_x > 0: 
-                    hitbox.right = wall.left
+                    if wall.left >= hitbox.left:
+                        hitbox.right = wall.left
+                    else:
+                        hitbox.left = wall.right
                 elif move_x < 0: 
-                    hitbox.left = wall.right
+                    if wall.right <= hitbox.right:
+                        hitbox.left = wall.right
+                    else:
+                        hitbox.right = wall.left
                     
                 # Synchronize the floating position based on the hitbox.
-                self.x = hitbox.x - offset_x
+                self.x = float(hitbox.x - offset_x)
 
         if collided_x and move_y != 0:
             move_y = original_speed if move_y > 0 else -original_speed
@@ -80,35 +86,55 @@ class BaseEnemy:
 
         collided_y = False
         if hasattr(self, 'solid_rects'):
-            if hasattr(self, 'solid_rects'):
-                idx = hitbox.collidelist(self.solid_rects)
-                if idx != -1:
-                    collided_y = True
-                    wall = self.solid_rects[idx]
-                    if move_y > 0: 
+            idx = hitbox.collidelist(self.solid_rects)
+            if idx != -1:
+                collided_y = True
+                wall = self.solid_rects[idx]
+                if move_y > 0: 
+                    if wall.top >= hitbox.top:
                         hitbox.bottom = wall.top
-                    elif move_y < 0: 
+                    else:
                         hitbox.top = wall.bottom
+                elif move_y < 0: 
+                    if wall.bottom <= hitbox.bottom:
+                        hitbox.top = wall.bottom
+                    else:
+                        hitbox.bottom = wall.top
 
-                    # Synchronize the floating position.
-                    self.y = hitbox.y - offset_y
+                # Synchronize the floating position.
+                self.y = float(hitbox.y - offset_y)
 
-                    
-                    # If we hit a horizontal wall (but the X-axis was clear), we redirect the energy to the X-axis.
-                    if not collided_x and move_x != 0:
-                        extra_x = (original_speed - abs(move_x)) if move_x > 0 else -(original_speed - abs(move_x))
-                        self.x += extra_x
+                # If we hit a horizontal wall (but the X-axis was clear), we redirect the energy to the X-axis.
+                if not collided_x and move_x != 0:
+                    extra_x = (original_speed - abs(move_x)) if move_x > 0 else -(original_speed - abs(move_x))
+                    self.x += extra_x
 
-                        # Quick safety check for that extra push
-                        hitbox.x = round(self.x + offset_x)
-                        idx2 = hitbox.collidelist(self.solid_rects)
-                        if idx2 != -1:
-                            wall2 = self.solid_rects[idx2]
-                            if extra_x > 0: hitbox.right = wall2.left
-                            elif extra_x < 0: hitbox.left = wall2.right
-                            self.x = hitbox.x - offset_x
+                    # Quick safety check for that extra push
+                    hitbox.x = round(self.x + offset_x)
+                    idx2 = hitbox.collidelist(self.solid_rects)
+                    if idx2 != -1:
+                        wall2 = self.solid_rects[idx2]
+                        if extra_x > 0:
+                            if wall2.left >= hitbox.left:
+                                hitbox.right = wall2.left
+                            else:
+                                hitbox.left = wall2.right
+                        elif extra_x < 0:
+                            if wall2.right <= hitbox.right:
+                                hitbox.left = wall2.right
+                            else:
+                                hitbox.right = wall2.left
+                        self.x = float(hitbox.x - offset_x)
+
+        # Keep enemy within horizontal map bounds
+        self.x = max(0, min(self.x, settings.VIRTUAL_WIDTH - sprite_w))
 
     def update(self, dt: float) -> None:
+        if getattr(self, 'is_spawning', False):
+            if self.current_animation:
+                self.current_animation.update(dt)
+            return
+
         if self.hit_flash_timer > 0:
             self.hit_flash_timer -= dt
 
@@ -196,6 +222,9 @@ class BaseEnemy:
 
     def _try_break_wall(self) -> None:
         """Scan the adjacent blocks and choose a valid one to break."""
+        if getattr(self, 'is_spawning', False):
+            return
+
         # We calculate which column and row the enemy is standing in.
         col = int((self.x - settings.MAP_RENDER_OFFSET_X) // settings.TILE_SIZE)
         row = int((self.y - settings.MAP_RENDER_OFFSET_Y) // settings.TILE_SIZE_Y)

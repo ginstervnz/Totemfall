@@ -45,6 +45,11 @@ class Ally:
         return closest
 
     def update(self, dt: float, enemies: list, totem, allies: list, solid_rects: list) -> None:
+        if getattr(self.visuals, 'is_spawning', False):
+            if hasattr(self.visuals, 'current_animation') and self.visuals.current_animation:
+                self.visuals.current_animation.update(dt)
+            return
+
         if getattr(self.visuals, 'hp', 0) <= 0:
             self.is_dead = True
             return

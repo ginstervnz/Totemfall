@@ -119,6 +119,11 @@ class WaveManager:
             sprite_w = new_enemy.width if hasattr(new_enemy, 'width') and new_enemy.width > 0 else 16
             sprite_h = new_enemy.height if hasattr(new_enemy, 'height') and new_enemy.height > 0 else 16
             
+            hitbox_w = 12
+            hitbox_h = 10
+            offset_x = (sprite_w - hitbox_w) / 2
+            offset_y = sprite_h - hitbox_h
+
             import math
             totem_cx = self.totem.x + (self.totem.width / 2)
             totem_cy = self.totem.y + (self.totem.height / 2)
@@ -128,16 +133,26 @@ class WaveManager:
                 px = settings.MAP_RENDER_OFFSET_X + tile_x * settings.TILE_SIZE
                 py = settings.MAP_RENDER_OFFSET_Y + tile_y * settings.TILE_SIZE_Y
                 
+                # Position enemy so that its 12x10 feet hitbox is centered on the tile (px + 8, py + 7)
                 test_x = px + (settings.TILE_SIZE / 2) - (sprite_w / 2)
-                test_y = py + (settings.TILE_SIZE_Y / 2) - (sprite_h / 2)
+                test_y = py + (settings.TILE_SIZE_Y / 2) - sprite_h + 5
                 
+                # Ensure the sprite fits inside virtual screen boundaries
+                if test_x < 0 or test_x + sprite_w > settings.VIRTUAL_WIDTH:
+                    continue
+                if test_y < 20 or test_y + sprite_h > settings.VIRTUAL_HEIGHT:
+                    continue
+
                 # SAFE ZONE CHECK: Ensure the enemy does not spawn too close to the Totem
-                dist_to_totem = math.hypot(test_x + (sprite_w / 2) - totem_cx, test_y + (sprite_h / 2) - totem_cy)
+                feet_cx = test_x + (sprite_w / 2)
+                feet_cy = test_y + sprite_h - 5
+                dist_to_totem = math.hypot(feet_cx - totem_cx, feet_cy - totem_cy)
                 if dist_to_totem < 100:
                     continue
                 
-                test_rect = pygame.Rect(test_x, test_y, sprite_w, sprite_h)
-                if test_rect.collidelist(solid_rects) == -1:
+                # Verify that the physical feet hitbox does NOT collide with any solid wall
+                test_hitbox = pygame.Rect(round(test_x + offset_x), round(test_y + offset_y), hitbox_w, hitbox_h)
+                if test_hitbox.collidelist(solid_rects) == -1:
                     spawn_x = test_x
                     spawn_y = test_y
                     valid_spawn = True
